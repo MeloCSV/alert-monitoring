@@ -1,0 +1,67 @@
+fwkpyt:
+  fwk_path: !ENV "${FWK_PATH}"
+  datasource:
+    driver: postgresql+psycopg
+    host: !ENV "${DATABASE_HOST}"
+    username: !ENV "${DATABASE_USERNAME}"
+    password: !ENV "${DATABASE_PASSWORD}"
+    database: !ENV "${DATABASE}"
+  logging:
+    version: 1
+    disable_existing_loggers: True
+    formatters:
+      verbose:
+        format: '{"application": "alert-monitoring-back-web-api", "logger_name": "%(name)s", 
+        "level": "%(levelname)s", "date": "%(asctime)s", "thread": "%(thread)d", "message": "%(message)s", "module": "%(module)s", 
+        "trace.id": "%(otelTraceID)s", "span.id": "%(otelSpanID)s"}'
+      verbose_error:
+        format: '{"application": "alert-monitoring-back-web-api", "logger_name": "%(name)s", 
+        "level": "%(levelname)s", "date": "%(asctime)s", "thread": "%(thread)d", "message": "%(message)s", "line": "%(module)s.%(funcName)s:%(lineno)d", 
+        "trace.id": "%(otelTraceID)s", "span.id": "%(otelSpanID)s"}'
+      uvicorn_verbose:
+        format: '{"application": "alert-monitoring-back-web-api", "logger_name": "%(name)s", 
+        "level": "%(levelname)s", "date": "%(asctime)s", "thread": "%(thread)d", "message": "%(message)s", "line": "%(module)s.%(funcName)s:%(lineno)d" 
+        "trace.id": "%(otelTraceID)s", "span.id": "%(otelSpanID)s"}'
+    handlers:
+      console:
+        level: DEBUG
+        formatter: verbose
+        class: logging.StreamHandler
+        stream: ext://sys.stdout
+      console_error:
+        level: ERROR
+        formatter: verbose_error
+        class: logging.StreamHandler
+        stream: ext://sys.stderr
+      uvicorn_error:
+        level: ERROR
+        formatter: uvicorn_verbose
+        class: logging.StreamHandler
+        stream: ext://sys.stderr
+    loggers:
+      local:
+        handlers:
+          - console
+          - console_error
+        level: INFO
+        propagate: False
+      prod:
+        handlers:
+          - console
+          - console_error
+        level: INFO
+        propagate: False
+      uvicorn:
+        handlers:
+          - uvicorn_error
+        level: ERROR
+        propagate: False
+  fastapi:
+    title: "Microservice - alert-monitoring-back-web-api"
+    version: "0.0.1"
+    description: "Backend microservice for alert-monitoring-back-web-api module, built with FastAPI."
+    security:
+      excluded_paths:
+        - /docs
+        - /openapi.json
+  

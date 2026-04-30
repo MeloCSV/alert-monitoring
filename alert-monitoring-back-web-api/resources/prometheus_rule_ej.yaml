@@ -1,0 +1,203 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: prometheus-operator
+    release: prometheus
+  name: activo2.rules
+  namespace: prometheus
+spec:
+  groups:
+
+# Alertado endpoints CMS
+  - name: activo2-servicios.rules
+    rules:
+    - alert: Activo2ServiceGenericProbeFailed
+      annotations:
+        message: "[CMS] Servicios principales Usuarios/Multimedia/Ejemplos/Notificaciones/Contenidos"
+      expr: probe_success{job=~"blackbox-activo-2-simple.*"} != 1
+      for: 5m
+      labels:
+          severity: warning
+          solucion: activo2
+          namespace: activo2-cms
+          canal: msteams
+          service: principal
+          msteams: "true"
+    
+    - alert: Activo2ServiceCriticalProbeFailed
+      annotations:
+        message: "[CMS] Servicios criticos Multimedia/ Ejemplos/Contenidos"
+      expr: probe_success{job=~"blackbox-activo-2-principal.*"} != 1
+      for: 2m
+      labels:
+          severity: critical
+          solucion: activo2
+          namespace: activo2-cms
+          canal: omi
+          service: principal
+          omi: "true"
+    
+    - alert: Activo2LoginServiceProbeFailed
+      annotations:
+        message: "[CMS] Servicio critico Login de Usuario"
+      expr: probe_success{job=~"blackbox-activo-2-login.*"} != 1
+      for: 2m
+      labels:
+          severity: critical
+          solucion: activo2
+          namespace: activo2-cms
+          canal: omi
+          service: login
+          omi: "true"
+    
+    - alert: Activo2CMSPublicacionesDecremento #No tiene condicion "for" para que dispare siempre, al ser de confirmacion MANUAL en OMi
+      annotations:
+        message: "La publicacion destacada {{ $labels.slug }} con id {{ $labels.id }} ha decrecido en el contador de visitas."
+      expr: delta(activo2_cms_destacados[5m]) < 0
+      labels:
+          severity: critical
+          type: MANUAL
+          solucion: activo2
+          namespace: activo2-cms
+          canal: omi
+          service: monitoring
+          omi: "true"
+
+### Comentamos esta alerta por discrepancia entre master y regla desplegada y porque hemos visto que ya no existe un job con este patron de texto
+# Alertado MOT
+#  - name: activo2-MOT.rules
+#    rules:
+#    - alert: MotbatchJobFailed
+#      annotations:
+#        message: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete.
+#        runbook_url: https://github.com/kubernetes/kube-state-metrics/blob/master/docs/job-metrics.md
+#      expr: kube_job_status_succeeded{job_name=~"^mot-batch.*"}  == 0
+#      for: 15m
+#      labels:
+#        severity: warning
+#        solucion: activo2
+#        canal : msteams
+#        msteams: "true"
+
+## Alertado recursos CMS
+# Garbage collector
+  - name: activo2-CMS.rules
+    rules:
+    - alert: GCDurationHigh
+      annotations:
+        message: "El GC en el pod {{ $labels.pod }} del entorno {{ $labels.environment }} ha tardado {{ $value | humanizeDuration }}"
+      expr: rate(jvm_gc_collection_seconds_sum{namespace="activo2-cms"}[5m]) / rate(jvm_gc_collection_seconds_count{namespace="activo2-cms"}[5m]) > 0.2
+      labels:
+        severity: warning
+        solucion: activo2
+        canal: msteams
+        msteams: "true"
+    
+    - alert: GCDurationCritical
+      annotations:
+        message: "El GC en el pod {{ $labels.pod }} del entorno {{ $labels.environment }} ha tardado {{ $value | humanizeDuration }}"
+      expr: rate(jvm_gc_collection_seconds_sum{namespace="activo2-cms"}[5m]) / rate(jvm_gc_collection_seconds_count{namespace="activo2-cms"}[5m]) > 0.35
+      labels:
+        # severity: critical
+        severity: warning
+        solucion: activo2
+        canal: omi
+        msteams: "true"
+
+# Hikari Thread Pool
+    - alert: HikariThreadPoolConnectionsHigh
+      annotations:
+        message: " {{ $value | humanizePercentage }} de conexiones activas al threadpool Hikari en el pod {{ $labels.pod }} del entorno {{ $labels.environment }}"
+      expr: (sum(com_zaxxer_hikari_pool_hikaripool_1_activeconnections{namespace="activo2-cms"}) by (pod, environment,cloud) / sum(com_zaxxer_hikari_poolconfig_hikaripool_1_maximumpoolsize{namespace="activo2-cms"}) by (pod, environment,cloud) > 70/100 ) OR (sum(com_zaxxer_hikari_pool_hikaripool_2_activeconnections{namespace="activo2-cms"}) by (pod, environment,cloud) / sum(com_zaxxer_hikari_poolconfig_hikaripool_2_maximumpoolsize{namespace="activo2-cms"}) by (pod, environment,cloud) > 70/100 ) 
+      for: 5m
+      labels:
+        severity: warning
+        solucion: activo2
+        canal: msteams
+        msteams: "true"
+    
+    - alert: HikariThreadPoolConnectionsCritical
+      annotations:
+        message: " {{ $value | humanizePercentage }} de conexiones activas al threadpool Hikari en el pod {{ $labels.pod }} del entorno {{ $labels.environment }}"
+      expr: (sum(com_zaxxer_hikari_pool_hikaripool_1_activeconnections{namespace="activo2-cms"}) by (pod, environment,cloud) / sum(com_zaxxer_hikari_poolconfig_hikaripool_1_maximumpoolsize{namespace="activo2-cms"}) by (pod, environment,cloud) > 90/100 ) OR (sum(com_zaxxer_hikari_pool_hikaripool_2_activeconnections{namespace="activo2-cms"}) by (pod, environment,cloud) / sum(com_zaxxer_hikari_poolconfig_hikaripool_2_maximumpoolsize{namespace="activo2-cms"}) by (pod, environment, cloud) > 90/100 )
+      for: 5m
+      labels:
+        # severity: critical
+        severity: warning
+        solucion: activo2
+        canal: omi #al ser warning va a teams según el enrutado
+        msteams: "true"
+
+# EHCache    
+    - alert: EHCacheMissPercentHigh
+      annotations:
+        message: "{{ $value | humanizePercentage }} de cache miss en el pod {{ $labels.pod }} del entorno {{ $labels.environment }} "
+      expr: sum(net_sf_ehcache_cachestatistics_cachemisses{namespace="activo2-cms"}) by (pod, environment,cloud) / (sum(net_sf_ehcache_cachestatistics_cachemisses{namespace="activo2-cms"}) by (pod, environment, cloud) + sum(net_sf_ehcache_cachestatistics_cachehits{namespace="activo2-cms"}) by (pod, environment, cloud)) >= 0.25
+      for: 5m
+      labels:
+        severity: warning
+        solucion: activo2
+        canal: msteams
+        msteams: "true"
+    
+    - alert: EHCacheMissPercentCritical
+      annotations:
+        message: "{{ $value | humanizePercentage }} de cache miss en el pod {{ $labels.pod }} del entorno {{ $labels.environment }} "
+      expr: sum(net_sf_ehcache_cachestatistics_cachemisses{namespace="activo2-cms"}) by (pod, environment,cloud) / (sum(net_sf_ehcache_cachestatistics_cachemisses{namespace="activo2-cms"}) by (pod, environment,cloud) + sum(net_sf_ehcache_cachestatistics_cachehits{namespace="activo2-cms"}) by (pod, environment,cloud)) >= 0.5
+      for: 5m
+      labels:
+        # severity: critical
+        severity: warning
+        solucion: activo2
+        canal: msteams
+        msteams: "true"
+
+# Elasticsearch
+    - alert: ElasticsearchClusterYellow
+      expr: elasticsearch_cluster_health_status{color="yellow",cluster="liferayelasticsearchcluster"} == 1
+      for: 5m
+      labels:
+        severity: warning
+        solucion: activo2
+        namespace: activo2-elastic
+        canal: msteams
+        msteams: "true"
+      annotations:
+        message: "Elasticsearch Cluster Yellow: {{ $labels.cluster }} {{ $labels.environment }}"
+
+    - alert: ElasticsearchClusterRed
+      expr: elasticsearch_cluster_health_status{color="red",cluster="liferayelasticsearchcluster"} == 1
+      for: 15m
+      labels:
+        severity: critical
+        solucion: activo2
+        namespace: activo2-elastic
+        canal: omi
+        omi: "true"
+      annotations:
+        message: "Elasticsearch Cluster Red: {{ $labels.cluster }} {{ $labels.environment }}"
+
+    - alert: ElasticsearchUnassignedShards
+      expr: elasticsearch_cluster_health_unassigned_shards{cluster="liferayelasticsearchcluster"} > 0
+      for: 15m
+      labels:
+        severity: warning
+        solucion: activo2
+        namespace: activo2-elastic
+        canal: msteams
+        msteams: "true"
+      annotations:
+        message: "Elasticsearch unassigned shards for 15 min: {{ $value }} in instance {{ $labels.name }} {{ $labels.environment }})"
+
+    - alert: ElasticsearchThreadPoolRejectedCountTooHigh
+      expr: elasticsearch_thread_pool_rejected_count{cluster="liferayelasticsearchcluster"} > 15
+      for: 15m
+      labels:
+        severity: warning
+        solucion: activo2
+        namespace: activo2-elastic
+        canal: msteams
+        msteams: "true"
+      annotations:
+        message: "Elasticsearch thread pool rejection count is too high for 15 min: {{ $value }}. Instance {{ $labels.name }} {{ $labels.environment }}  Type: {{ $labels.type }}"

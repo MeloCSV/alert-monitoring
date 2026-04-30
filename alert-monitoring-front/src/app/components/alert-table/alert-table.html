@@ -1,0 +1,42 @@
+<div class="container">
+  <h1>Alert Monitoring</h1>
+
+  @if (loading) {
+    <div class="loading">Cargando alertas...</div>
+  }
+  @if (error) {
+    <div class="error">Error al cargar las alertas.</div>
+  }
+  @if (!loading && !error) {
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Severidad</th>
+          <th>Microservicio</th>
+          <th>Canal</th>
+          <th>Entornos</th>
+          <th>Confianza</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (alert of alerts; track alert.name) {
+          <tr>
+            <td>{{ alert.name }}</td>
+            <td><span class="badge" [ngClass]="getSeverityClass(alert.severity)">{{ alert.severity }}</span></td>
+            <td>{{ alert.microservice || '-' }}</td>
+            <td>{{ alert.notification_channel || '-' }}</td>
+            <td>{{ alert.environments.length ? alert.environments.join(', ') : '-' }}</td>
+            <td>
+              <span class="confidence" [ngClass]="getConfidenceColor(alert.confidence_level)">
+                {{ (alert.confidence_level * 100).toFixed(0) }}%
+              </span>
+            </td>
+            <td class="description">{{ alert.description }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

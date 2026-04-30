@@ -1,0 +1,18 @@
+fwkpyt:
+  fwk_path: !ENV "${FWK_PATH}"
+  datasource:
+    driver: postgresql+psycopg
+    host: !ENV "${DB_HOST}"
+    port: !ENV "${DB_PORT}"
+    database: !ENV "${DB_NAME}"
+    username: !ENV "${DB_USER}"
+    password: !ENV "${DB_PASSWORD}"
+  logging:
+    disable_existing_loggers: False
+    formatters:
+      verbose:
+        format: '{"application": "alert-monitoring-back-web-api", "level": "%(levelname)s", 
+        "date": "%(asctime)s", "thread": "%(thread)d", "message": "%(message)s", "line": "%(module)s.%(funcName)s:%(lineno)d"}'
+      verbose_natural:
+        format: ''
+        (): logging.Formatter

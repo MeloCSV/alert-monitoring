@@ -1,0 +1,3 @@
+---
+en:
+  example_not_found: Example with id [%{id}] does not exist

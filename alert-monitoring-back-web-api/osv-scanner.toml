@@ -1,0 +1,24 @@
+[[PackageOverrides]]
+name = "fwkpy-lib-core"
+ignore = true
+reason = "Gestionado internamente en Artifactory"
+
+[[PackageOverrides]]
+name = "fwkpy-lib-database"
+ignore = true
+reason = "Gestionado internamente en Artifactory"
+
+[[PackageOverrides]]
+name = "fwkpy-lib-fastapi"
+ignore = true
+reason = "Gestionado internamente en Artifactory"
+
+[[PackageOverrides]]
+name = "fwkpy-lib-generative-ai"
+ignore = true
+reason = "Gestionado internamente en Artifactory"
+
+[[PackageOverrides]]
+name = "fwkpy-lib-kafka"
+ignore = true
+reason = "Gestionado internamente en Artifactory"

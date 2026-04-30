@@ -1,0 +1,26 @@
+---
+version: '3.7'
+
+networks:
+  local:
+    name: my-web-network
+
+services:
+  db_postgres_alert_monitoring:
+    image: postgres:11
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: alert_monitoring
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - postgres11-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - local
+
+volumes:
+  postgresql:
+  postgres11-data:
+    driver: local

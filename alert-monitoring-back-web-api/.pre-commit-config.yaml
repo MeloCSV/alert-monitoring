@@ -1,0 +1,30 @@
+# First install pre-commit -> brew install pre-commit
+# Initialize and add pre-commit hook -> pre-commit install
+# Install ruff -> brew install ruff
+# Install osv-scanner -> brew install osv-scanner
+# To run it manually -> pre-commit run --all-files
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff Linter
+        # --fix: Fix automatically problems that can be fixed
+        # --force-exclude: Respect the exclusions in your pyproject.toml even if pre-commit passes the file
+        language: system
+        entry: ruff check --force-exclude
+        types: [ python ]
+        require_serial: true
+      - id: poe-tests
+        name: Tests & Coverage
+        entry: poetry run poe tests_ci --cov-fail-under=80
+        language: system
+        pass_filenames: false
+        files: ^(src/.*\.py|tests/.*\.py|pyproject\.toml|poetry\.lock)$
+      - id: osv-scanner
+        name: OSV Scanner (Security)
+        entry: osv-scanner
+        args: [ "-r", "." ]
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true

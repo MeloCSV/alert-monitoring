@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "alert-monitoring-back-web-api"
+version = "0.0.1"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.12"
+
+# FWK dependencies
+fwkpy-lib-core = "~1.0"
+fwkpy-lib-database = "~1.0"
+fwkpy-lib-fastapi = "~1.0"
+
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "~8.3"
+pytest-env = "~1.1"
+pytest-cov = "~6.0"
+pytest-mock = "3.14"
+pytest-asyncio = "~0.24"
+pytest-xdist = "~3.6"
+pytest-faker = "~2.0"
+pytest-freezer = "~0.4"
+pyfakefs = "~5.7"
+
+[[tool.poetry.source]]
+name = "virtual-poetry"
+url = "https://artifactory.gcp.mercadona.com/artifactory/api/pypi/virtual-poetry/simple"
+priority = "supplemental"
+
+[tool.poe.tasks]
+tests_ci = "pytest -ra -q --cov-report=term-missing --cov-report xml:coverage.xml --cov-fail-under=80 --cov=alert_monitoring --junitxml=result.xml -v -s -n 2 --dist loadscope"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+asyncio_default_fixture_loop_scope = "function"
+env = [
+    "ENVIRONMENT=local",
+    "FWK_PATH=alert_monitoring/api",
+]
+
+
+[tool.fwk-core]
+hash-version = "SCMH2e+f3k1s46YkAa+dySm1KIpe+qht/RP5nCXIMpDCHBWIANopdMImYXXPYG9O3AwU6WBMlm3w03Voni6xAI5Vnz5dvrXwzEeezah8/6UBYpUsp9V4C3pV+YYxj497dxIh14DHJsl5fKHlZrf548JUiQRWT82juuAcddNrozFkGxtgEnHmufu+OOGEApSKRbFRf7Hi2hiSzKmbaO10tGPxm+wBGAJU2y6aHCVQYk6xS1vIcMNXgk7rOzNYpvuS5JvZwprUxd+DRqdLo0LSH+w="
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

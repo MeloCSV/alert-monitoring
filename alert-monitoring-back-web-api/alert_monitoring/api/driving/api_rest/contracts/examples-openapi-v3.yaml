@@ -1,0 +1,493 @@
+---
+openapi: 3.0.1
+info:
+  title: Quickstart service Demo
+  description: Example API definition for quickstart project
+  version: 2.2.2
+tags:
+  - name: examples
+    description: Example Controller
+paths:
+  /examples:
+    get:
+      tags:
+        - examples
+      summary: Method to retrieve a collection of examples
+      description: This method retrieves a collection of examples
+      operationId: getExampleCollection
+      parameters:
+        - name: firstPage
+          in: query
+          description: Requested page (first page is page 1). If not specified 1 is
+            used. [Cannot be negative or zero]
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of retrieved elements per page. if not specified 10 is
+            used. [Cannot be less than 1]
+          schema:
+            type: integer
+            format: int32
+            default: 10
+        - name: sort
+          in: query
+          description: 'Sort of the query. [sort=+id] will order asc by id, or [sort=+id] desc by id). Default unsorted.'
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleResourceCollectionResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+      security:
+        - adfs: [ ]
+      x-mercadona-security:
+        operationgroups:
+          - DCNA_GET_ObtenerProductos
+    post:
+      tags:
+        - examples
+      summary: Method to add one example to the data storage
+      description: This method creates a new example with the given body information
+      operationId: createExample
+      requestBody:
+        description: exampleRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExampleRequest'
+        required: true
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleResourceResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+      security:
+        - adfs: [ ]
+      x-mercadona-security:
+        operationgroups:
+          - DCNA_POST_AProductos
+      x-codegen-request-body-name: exampleRequest
+  /examples/{id}:
+    get:
+      tags:
+        - examples
+      summary: Method to retrieve one example
+      description: This method retrieves a example defined by a specific id
+      operationId: getExample
+      parameters:
+        - name: id
+          in: path
+          description: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleResourceResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+      security:
+        - adfs: [ ]
+      x-mercadona-security:
+        operationgroups:
+          - DCNA_GET_idProducto
+    put:
+      tags:
+        - examples
+      summary: Method to update a example
+      description: This method updates a example defined by its id
+      operationId: updateExample
+      parameters:
+        - name: id
+          in: path
+          description: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: exampleRequest
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/ExampleRequest'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleResourceResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+      security:
+        - adfs: [ ]
+      x-mercadona-security:
+        operationgroups:
+          - DCNA_PUT_idEditarProducto
+      x-codegen-request-body-name: exampleRequest
+    delete:
+      tags:
+        - examples
+      summary: Method to delete a example
+      description: This method delete a example by its id
+      operationId: deleteExample
+      parameters:
+        - name: id
+          in: path
+          description: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        202:
+          description: No content
+          content: { }
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResourceResponse'
+      security:
+        - adfs: [ ]
+      x-mercadona-security:
+        operationgroups:
+          - DCNA_DEL_idDeleteProducto
+components:
+  schemas:
+    LegacyResource:
+      title: LegacyResource
+      type: object
+      properties:
+        publicId:
+          type: string
+        thirdPartyId:
+          type: string
+        siteId:
+          type: string
+        companyId:
+          type: string
+        typeId:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
+        province:
+          type: string
+        groupingName:
+          type: string
+        activationDate:
+          type: string
+        deactivationDate:
+          type: string
+    LegacyResourceResponse:
+      title: LegacyResourceResponse
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegacyResource'
+    EmptyObject:
+      title: EmptyObject
+      type: object
+    ExampleRequest:
+      title: ExampleRequest
+      required:
+        - creation_time
+        - description
+        - identification
+        - identification_type
+        - name
+        - number_of_days_in_week
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          maxLength: 30
+          minLength: 5
+          type: string
+        creation_time:
+          type: string
+          format: date-time
+        identification_type:
+          $ref: '#/components/schemas/IdentificationTypesRequestEnum'
+        identification:
+          pattern: (?:(?=^[0-9])[0-9]{8}[A-Z]{1}$|(?!^[0-9])[A-Z]{1}[0-9]{7}[A-Z]{1}$)
+          type: string
+        number_of_days_in_week:
+          maximum: 7
+          minimum: 1
+          type: integer
+          format: int32
+    ExampleResource:
+      title: ExampleResource
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        creation_time:
+          type: string
+          format: date-time
+        identification_type:
+          $ref: '#/components/schemas/IdentificationTypesRequestEnum'
+        identification:
+          type: string
+        number_of_days_in_week:
+          type: integer
+          format: int32
+    ExampleResourceResponse:
+      title: ExampleResourceResponse
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ExampleResource'
+    ExampleResourceCollection:
+      title: ExampleResourceCollection
+      type: object
+      properties:
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExampleResource'
+    ExampleResourceCollectionResponse:
+      title: ExampleResourceCollectionResponse
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ExampleResourceCollection'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    ExampleResourceCollectionCursorResponse:
+      title: ExampleResourceCollectionCursorResponse
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ExampleResourceCollection'
+        cursorPagination:
+          $ref: '#/components/schemas/CursorPagination'
+    ErrorResource:
+      title: ErrorResource
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    ErrorResourceResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorResource'
+    IdentificationTypesRequestEnum:
+      type: string
+      enum:
+        - DNI
+        - NIE
+    Pagination:
+      type: object
+      properties:
+        requestedPage:
+          type: integer
+          format: int32
+        requestedSize:
+          type: integer
+          format: int32
+        retrievedResults:
+          type: integer
+          format: int32
+        totalResults:
+          type: integer
+          format: int64
+        nextPage:
+          type: string
+        previousPage:
+          type: string
+    CursorPagination:
+      type: object
+      properties:
+        requestedSize:
+          type: integer
+        retrievedResults:
+          type: integer
+        nextPage:
+          type: string
+        previousPage:
+          type: string
+  securitySchemes:
+    adfs:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: ""
+          scopes: { }

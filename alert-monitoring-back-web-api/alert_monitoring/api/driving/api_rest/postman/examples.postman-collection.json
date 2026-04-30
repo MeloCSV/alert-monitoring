@@ -1,0 +1,614 @@
+
+{
+	"info": {
+		"_postman_id": "523a7663-8f01-4131-92db-ad297b4c50de",
+		"name": "examples",
+		"description": "Example API definition for quickstart project",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create an example",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const example = jsonPayload.data;",
+							"",
+							"postman.setEnvironmentVariable(\"id\", example.id);",
+							"",
+							"pm.test(\"should have 201 status\", () => {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should have the created body\", () => {",
+							"    pm.expect(example).to.have.property(\"id\");",
+							"    pm.expect(example.id).to.be.a(\"number\");",
+							"    pm.expect(example.name).to.eql(\"TheExample\");",
+							"    pm.expect(example.description).to.eql(\"An Example\");",
+							"    pm.expect(example.creation_time).to.eql(\"2019-08-03T16:20:17.717+01:00\");",
+							"    pm.expect(example.identification_type).to.eql(\"NIE\");",
+							"    pm.expect(example.identification).to.eql(\"Y6713575G\");",
+							"    pm.expect(example.number_of_days_in_week).to.eql(7);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"TheExample\",\n    \"description\": \"An Example\",\n    \"creation_time\": \"2019-08-03T16:20:17.717+01:00\",\n    \"identification_type\": \"NIE\",\n    \"identification\": \"Y6713575G\",\n    \"number_of_days_in_week\": 7\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/examples",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples"
+					]
+				},
+				"description": "This method creates a new example with the given body information"
+			},
+			"response": []
+		},
+		{
+			"name": "Bad request error when creating an example wihtout all required properties",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"",
+							"pm.test(\"should have 400 status\", () => {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should have the correct payload\", () => {",
+							"",
+							"    pm.expect(jsonPayload).to.have.property(\"error\");",
+							"    pm.expect(jsonPayload.error).to.be.a(\"object\");",
+							"",
+							"    pm.expect(jsonPayload.error.code).to.eql(\"SB03\");",
+							"    pm.expect(jsonPayload.error.description).to.eql(\"Validation error\");",
+							"    pm.expect(jsonPayload.error.details[0]).to.eql(`name no puede ser null`);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"description\": \"An Example\",\n    \"creation_time\": \"2019-08-03T16:20:17.717+01:00\",\n    \"identification_type\": \"NIE\",\n    \"identification\": \"Y6713575G\",\n    \"number_of_days_in_week\": 7\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/examples",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples"
+					]
+				},
+				"description": "This method creates a new example with the given body information"
+			},
+			"response": []
+		},
+		{
+			"name": "Get a page of Examples",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/examples",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples"
+					]
+				},
+				"description": "This method retrieves a collection of examples"
+			},
+			"response": []
+		},
+		{
+			"name": "Get example by id",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const example = jsonPayload.data;",
+							"",
+							"pm.test(\"should have 200 status\", () => {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should have the correct example\", () => {",
+							"    pm.expect(example.id).to.eql(parseInt(pm.environment.get(\"id\"), 10));",
+							"    pm.expect(example.name).to.eql(\"TheExample\");",
+							"    pm.expect(example.description).to.eql(\"An Example\");",
+							"    pm.expect(example.creation_time).to.eql(\"2019-08-03T17:20:17.717+02:00\");",
+							"    pm.expect(example.identification_type).to.eql(\"NIE\");",
+							"    pm.expect(example.identification).to.eql(\"Y6713575G\");",
+							"    pm.expect(example.number_of_days_in_week).to.eql(7);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{id}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{id}}"
+					]
+				},
+				"description": "This method retrieves a example defined by a specific id"
+			},
+			"response": []
+		},
+		{
+			"name": "Not found error when getting a non-existing example",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const nonExistingId = postman.getEnvironmentVariable(\"id\") + 123;",
+							"",
+							"postman.setEnvironmentVariable(\"nonExistingId\", nonExistingId);",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"",
+							"const nonExistingId = postman.getEnvironmentVariable(\"nonExistingId\");",
+							"",
+							"pm.test(\"should have 404 status\", () => {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"should have the correct payload\", () => {",
+							"",
+							"    pm.expect(jsonPayload).to.have.property(\"error\");",
+							"    pm.expect(jsonPayload.error).to.be.a(\"object\");",
+							"",
+							"    pm.expect(jsonPayload.error.code).to.eql(\"G03\");",
+							"    pm.expect(jsonPayload.error.description).to.eql(\"Resource not found\");",
+							"    pm.expect(jsonPayload.error.details[0]).to.eql(`Example with id ${nonExistingId} not found.`);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{nonExistingId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{nonExistingId}}"
+					]
+				},
+				"description": "This method retrieves a example defined by a specific id"
+			},
+			"response": []
+		},
+		{
+			"name": "Get a page of examples",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const examplesData = jsonPayload.data;",
+							"",
+							"pm.test(\"should have 200 status\", () => {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should retrieve an array of examples\", () => {",
+							"    pm.expect(examplesData).to.have.property(\"examples\");",
+							"    pm.expect(jsonPayload).to.have.property(\"pagination\");",
+							"",
+							"    const examples = examplesData.examples;",
+							"    pm.expect(examples).to.be.a(\"array\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/examples?firstPage=1&pageSize=10",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples"
+					],
+					"query": [
+						{
+							"key": "firstPage",
+							"value": "1"
+						},
+						{
+							"key": "pageSize",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get a page of examples Sort",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const examplesData = jsonPayload.data;",
+							"",
+							"pm.test(\"should have 200 status\", () => {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should retrieve an array of examples\", () => {",
+							"    pm.expect(examplesData).to.have.property(\"examples\");",
+							"    pm.expect(jsonPayload).to.have.property(\"pagination\");",
+							"",
+							"    const examples = examplesData.examples;",
+							"    pm.expect(examples).to.be.a(\"array\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/examples?firstPage=1&pageSize=10&sort=-id",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples"
+					],
+					"query": [
+						{
+							"key": "firstPage",
+							"value": "1"
+						},
+						{
+							"key": "pageSize",
+							"value": "10"
+						},
+						{
+							"key": "sort",
+							"value": "-id"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update an example",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const example = jsonPayload.data;",
+							"",
+							"postman.setEnvironmentVariable(\"id\", example.id);",
+							"",
+							"pm.test(\"should have 200 status\", () => {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"should have a JSON body\", () => {",
+							"    pm.response.to.be.withBody;",
+							"    pm.response.to.be.json;",
+							"});",
+							"",
+							"pm.test(\"should have the created body\", () => {",
+							"    pm.expect(example).to.have.property(\"id\");",
+							"    pm.expect(example.id).to.be.a(\"number\");",
+							"    pm.expect(example.name).to.eql(\"TheExample\");",
+							"    pm.expect(example.description).to.eql(\"An Example\");",
+							"    pm.expect(example.creation_time).to.eql(\"2019-08-03T16:20:17.717+01:00\");",
+							"    pm.expect(example.identification_type).to.eql(\"NIE\");",
+							"    pm.expect(example.identification).to.eql(\"Y6713575G\");",
+							"    pm.expect(example.number_of_days_in_week).to.eql(6);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"TheExample\",\n    \"description\": \"An Example\",\n    \"creation_time\": \"2019-08-03T16:20:17.717+01:00\",\n    \"identification_type\": \"NIE\",\n    \"identification\": \"Y6713575G\",\n    \"number_of_days_in_week\": 6\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{id}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{id}}"
+					]
+				},
+				"description": "This method creates a new example with the given body information"
+			},
+			"response": []
+		},
+		{
+			"name": "Not found error when updating a nin-existing example",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"const example = jsonPayload.data;",
+							"",
+							"const nonExistingId = postman.getEnvironmentVariable(\"nonExistingId\");",
+							"",
+							"pm.test(\"should have 404 status\", () => {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"should have the correct payload\", () => {",
+							"",
+							"    pm.expect(jsonPayload).to.have.property(\"error\");",
+							"    pm.expect(jsonPayload.error).to.be.a(\"object\");",
+							"",
+							"    pm.expect(jsonPayload.error.code).to.eql(\"G03\");",
+							"    pm.expect(jsonPayload.error.description).to.eql(\"Resource not found\");",
+							"    pm.expect(jsonPayload.error.details[0]).to.eql(`Example with id ${nonExistingId} not found.`);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"TheExample\",\n    \"description\": \"An Example\",\n    \"creation_time\": \"2019-08-03T16:20:17.717+01:00\",\n    \"identification_type\": \"NIE\",\n    \"identification\": \"Y6713575G\",\n    \"number_of_days_in_week\": 6\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{nonExistingId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{nonExistingId}}"
+					]
+				},
+				"description": "This method creates a new example with the given body information"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete example by its id",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"should have 204 status\", () => {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{id}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Not found error when deleting example by a non-existing id",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonPayload = pm.response.json();",
+							"",
+							"const nonExistingId = postman.getEnvironmentVariable(\"nonExistingId\");",
+							"",
+							"pm.test(\"should have 404 status\", () => {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"should have the correct payload\", () => {",
+							"",
+							"    pm.expect(jsonPayload).to.have.property(\"error\");",
+							"    pm.expect(jsonPayload.error).to.be.a(\"object\");",
+							"",
+							"    pm.expect(jsonPayload.error.code).to.eql(\"G03\");",
+							"    pm.expect(jsonPayload.error.description).to.eql(\"Resource not found\");",
+							"    pm.expect(jsonPayload.error.details[0]).to.eql(`Example with id ${nonExistingId} not found.`);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/examples/{{nonExistingId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"examples",
+						"{{nonExistingId}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "/example/api/v1"
+		},
+		{
+			"key": "id",
+			"value": "1"
+		},
+		{
+			"key": "nonExistingId",
+			"value": "20"
+		}
+	]
+}
+
