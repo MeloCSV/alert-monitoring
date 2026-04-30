@@ -1,11 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { AlertService, Alert } from '../../services/alert';
 
 @Component({
   selector: 'app-alert-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './alert-table.html',
   styleUrl: './alert-table.scss'
 })
@@ -14,17 +13,19 @@ export class AlertTableComponent implements OnInit {
   loading = true;
   error = false;
 
-  constructor(private alertService: AlertService) {}
+  constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.alertService.getAlerts().subscribe({
       next: (data) => {
         this.alerts = data;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.error = true;
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
