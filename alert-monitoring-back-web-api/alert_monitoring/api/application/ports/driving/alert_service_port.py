@@ -9,5 +9,9 @@ class AlertServicePort(ABC):
         pass
 
     @abstractmethod
+    def save_elastic_alerts(self, json_content: str) -> None:
+        pass
+
+    @abstractmethod
     def get_all_alerts(self) -> List[Alert]:
         pass
