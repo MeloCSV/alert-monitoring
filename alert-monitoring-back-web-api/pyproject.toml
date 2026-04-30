@@ -14,6 +14,7 @@ python = "~3.12"
 fwkpy-lib-core = "~1.0"
 fwkpy-lib-database = "~1.0"
 fwkpy-lib-fastapi = "~1.0"
+sqlmodel = "^0.0.38"
 
 
 
