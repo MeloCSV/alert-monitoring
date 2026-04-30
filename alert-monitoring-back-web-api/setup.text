@@ -1,0 +1,29 @@
+#Inicializar el back
+
+1. Ir a la carpeta del proyecto
+Primero, entra donde está el código:
+
+cd ~/reto/alert-monitoring/alert-monitoring-back-web-api
+
+2. Activar el entorno virtual
+
+source alert_monitoring/.venv/bin/activate
+
+3. Lanzar el servidor
+
+
+uvicorn alert_monitoring.api.boot.main:app --host 127.0.0.1 --port 8080 --reload --env-file .env
+
+4. abrir google 
+http://localhost:8080/docs
+
+
+#Inicializar el front
+
+1. Ir al directorio
+
+cd ~/reto/alert-monitoring-front
+
+2. Inicializar el servidor
+
+ng serve
