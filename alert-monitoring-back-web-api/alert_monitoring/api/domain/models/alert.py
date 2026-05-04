@@ -19,9 +19,9 @@ class Alert(BaseModel):
 
     alert_type: Literal["Por Defecto", "Ad-hoc"] = Field(
         default="Ad-hoc", 
-        description="Indica si es un alertado por defecto ofrecido por Observabilidad o Ad-hoc solicitado por los equipos"
+        description="Indica si es un alertado por defecto o Ad-hoc"
     )
     is_overridden: bool = Field(
         default=False, 
-        description="True si esta alerta 'Por Defecto' ha sido deshabilitada/sustituida por una versión Ad-hoc (HU-22 / CU-04)"
+        description="True si esta alerta 'Por Defecto' ha sido deshabilitada/sustituida por una versión Ad-hoc"
     )
