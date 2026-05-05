@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
@@ -13,6 +13,8 @@ from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
 from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.domain.models.alert_filter import AlertFilter
+
 
 
 class AlertService(AlertServicePort):
@@ -40,6 +42,6 @@ class AlertService(AlertServicePort):
         alerts = self.elastic_mapper.to_domain(rules)
         self.save_elastic_use_case.execute(alerts)
 
-    def get_all_alerts(self) -> List[Alert]:
+    def get_all_alerts(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
         self.logger.info('get_all_alerts')
-        return self.get_all_use_case.execute()
+        return self.get_all_use_case.execute(filters)
