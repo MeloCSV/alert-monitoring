@@ -12,3 +12,5 @@ class AlertResponse(BaseModel):
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
     confidence_level: float
+    alert_type: str = "Ad-hoc"
+    is_overridden: bool = False

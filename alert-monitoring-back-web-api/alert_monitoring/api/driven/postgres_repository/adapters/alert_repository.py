@@ -1,10 +1,11 @@
-from typing import List
+from typing import List,Optional
 
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from fwkpy_lib_database.synchronous.datasource import DataSourceManager
 
 from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.driven.postgres_repository.models.alert_model import AlertDB
 from alert_monitoring.api.driven.postgres_repository.mappers.alert_db_mapper import AlertDBMapper
@@ -25,7 +26,33 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
             self.sqlalchemy_repository.add(alert_db)
         self.sqlalchemy_repository.commit()
 
-    def get_all(self) -> List[Alert]:
-        self.logger.info("Consultando todas las alertas")
-        alerts_db = self.sqlalchemy_repository.query(AlertDB).all()
+    def get_all(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
+        self.logger.info(f"Consultando alertas con filtros: {filters}")
+        query = self.sqlalchemy_repository.query(AlertDB)
+
+        if filters is not None:
+            if filters.name:
+                query = query.filter(AlertDB.name.ilike(f"%{filters.name}%"))
+            if filters.source_tool:
+                query = query.filter(AlertDB.source_tool == filters.source_tool)
+            if filters.severity:
+                query = query.filter(AlertDB.severity == filters.severity)
+            if filters.microservice:
+                query = query.filter(AlertDB.microservice.ilike(f"%{filters.microservice}%"))
+            if filters.solution:
+                query = query.filter(AlertDB.solution.ilike(f"%{filters.solution}%"))
+            if filters.alert_type:
+                query = query.filter(AlertDB.alert_type == filters.alert_type)
+            if filters.is_overridden is not None:
+                query = query.filter(AlertDB.is_overridden == filters.is_overridden)
+
+        alerts_db = query.all()
+
+        if filters is not None and filters.environments:
+            wanted = set(filters.environments)
+            alerts_db = [
+                a for a in alerts_db
+                if a.environments and wanted.intersection(a.environments)
+            ]
+
         return self.alert_db_mapper.to_domain_list(alerts_db)
