@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export interface Alert {
   name: string;
   description: string;
-  source_tool: string;
+  source_tool: string | null;
   severity: string;
   condition: string;
   environments: string[];
@@ -13,6 +13,8 @@ export interface Alert {
   solution: string | null;
   notification_channel: string | null;
   confidence_level: number;
+  alert_type: 'Por Defecto' | 'Ad-hoc';
+  is_overridden: boolean;
 }
 
 @Injectable({
