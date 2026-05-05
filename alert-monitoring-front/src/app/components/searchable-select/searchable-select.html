@@ -1,0 +1,33 @@
+<div class="searchable-select" [class.open]="open">
+  <div class="control" (click)="open = !open; query = ''">
+    <input
+      type="text"
+      [value]="displayValue"
+      [placeholder]="placeholder"
+      (focus)="onFocus()"
+      (input)="onInput($any($event.target).value)"
+      (click)="$event.stopPropagation(); open = true"
+    />
+    @if (value && !open) {
+      <button type="button" class="clear" (click)="clear($event)" aria-label="Limpiar">×</button>
+    }
+    <span class="caret" aria-hidden="true">▾</span>
+  </div>
+
+  @if (open) {
+    <div class="dropdown">
+      @if (filteredOptions.length === 0) {
+        <div class="empty">Sin resultados</div>
+      }
+      @for (option of filteredOptions; track option) {
+        <div
+          class="option"
+          [class.selected]="option === value"
+          (click)="selectOption(option)"
+        >
+          {{ option }}
+        </div>
+      }
+    </div>
+  }
+</div>

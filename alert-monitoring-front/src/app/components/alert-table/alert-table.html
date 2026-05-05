@@ -1,38 +1,169 @@
-<div class="container">
-  <h1>Alert Monitoring</h1>
+<div class="page">
+  <div class="card">
+    <header class="card-header">
+      <h1>Alertas</h1>
+    </header>
 
-  @if (loading) {
-    <div class="loading">Cargando alertas...</div>
-  }
-  @if (error) {
-    <div class="error">Error al cargar las alertas.</div>
-  }
-  @if (!loading && !error) {
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Severidad</th>
-          <th>Microservicio</th>
-          <th>Canal</th>
-          <th>Entornos</th>
-          <th>Confianza</th>
-          <th>Descripción</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (alert of alerts; track alert.name) {
-          <tr>
-            <td>{{ alert.name }}</td>
-            <td><span [class]="'badge ' + getSeverityClass(alert.severity)">{{ alert.severity }}</span></td>
-            <td>{{ alert.microservice || '-' }}</td>
-            <td>{{ alert.notification_channel || '-' }}</td>
-            <td>{{ alert.environments.length ? alert.environments.join(', ') : '-' }}</td>
-            <td><span [class]="'confidence ' + getConfidenceColor(alert.confidence_level)">{{ (alert.confidence_level * 100).toFixed(0) }}%</span></td>
-            <td class="description">{{ alert.description }}</td>
-          </tr>
+    <section class="filters">
+      <div class="filters-row">
+        <span class="filters-label">Filtrar por:</span>
+
+        <div class="filter">
+          <label>Nombre alarma</label>
+          <app-searchable-select
+            [options]="alarmNameOptions"
+            placeholder="Todas las alarmas"
+            [value]="alarmName"
+            (valueChange)="alarmName = $event"
+          ></app-searchable-select>
+        </div>
+
+        <div class="filter">
+          <label>Nombre solución</label>
+          <app-searchable-select
+            [options]="solutionOptions"
+            placeholder="Todas las soluciones"
+            [value]="solutionName"
+            (valueChange)="solutionName = $event"
+          ></app-searchable-select>
+        </div>
+
+        <div class="filter">
+          <label>Nombre de microservicio</label>
+          <app-searchable-select
+            [options]="microserviceOptions"
+            placeholder="Todos los microservicios"
+            [value]="microserviceName"
+            (valueChange)="microserviceName = $event"
+          ></app-searchable-select>
+        </div>
+
+        <div class="filter">
+          <label>Entorno</label>
+          <select [(ngModel)]="environment" class="select">
+            <option value="">Todos los entornos</option>
+            <option value="dev">Dev</option>
+            <option value="itg">Itg</option>
+            <option value="pre">Pre</option>
+            <option value="pro">Pro</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label>Severidad</label>
+          <select [(ngModel)]="severity" class="select">
+            <option value="">Todas las severidades</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+            <option value="principal">Principal</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label>Tipo de alarma</label>
+          <select [(ngModel)]="alertType" class="select">
+            <option value="">Cualquier tipo de alarma</option>
+            <option value="Por Defecto">Por defecto</option>
+            <option value="Ad-hoc">Ad hoc</option>
+          </select>
+        </div>
+
+        <div class="filter search">
+          <label>&nbsp;</label>
+          <div class="search-control">
+            <input
+              type="text"
+              [(ngModel)]="globalSearch"
+              placeholder="Buscar"
+              (keydown.enter)="triggerSearch()"
+            />
+            <button type="button" class="btn-search" (click)="triggerSearch()">Buscar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="advanced">
+        <button type="button" class="advanced-toggle" (click)="toggleAdvanced()" [class.open]="showAdvanced">
+          <span class="chevron" aria-hidden="true">▾</span>
+          Filtros avanzados
+        </button>
+
+        @if (showAdvanced) {
+          <div class="advanced-row">
+            <div class="filter">
+              <label>Source tool</label>
+              <select [(ngModel)]="sourceTool" class="select">
+                <option value="">Todos los sources</option>
+                <option value="prometheus">Prometheus</option>
+                <option value="elastic">Elastic</option>
+              </select>
+            </div>
+
+            <div class="filter">
+              <label>is_overridden</label>
+              <select [(ngModel)]="isOverridden" class="select">
+                <option value="">Cualquiera</option>
+                <option value="yes">Sí</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+          </div>
         }
-      </tbody>
-    </table>
-  }
+         </div>
+    </section>
+
+    <section class="results">
+      @if (loading) {
+        <div class="state loading">Cargando alertas...</div>
+      }
+      @if (error) {
+        <div class="state error">Error al cargar las alertas.</div>
+      }
+      @if (!loading && !error) {
+        <table class="alert-table">
+          <thead>
+            <tr>
+              <th>Nombre de la alarma</th>
+              <th>Solución</th>
+              <th>Microservicio</th>
+              <th>Entorno</th>
+              <th class="center">Severidad</th>
+              <th class="center">Tipo de alerta</th>
+              <th class="center">Confianza</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (alert of filteredAlerts; track alert.name + '-' + alert.microservice + '-' + alert.alert_type) {
+              <tr>
+                <td>{{ alert.name }}</td>
+                <td>{{ alert.solution || '-' }}</td>
+                <td>{{ alert.microservice || '-' }}</td>
+                <td>{{ alert.environments.length ? alert.environments.join(', ') : '-' }}</td>
+                <td class="center">
+                  <span class="badge" [class]="'badge ' + getSeverityClass(alert.severity)">
+                    {{ alert.severity }}
+                  </span>
+                </td>
+                <td class="center">
+                  <span class="badge" [class]="'badge ' + getAlertTypeClass(alert.alert_type)">
+                    {{ alertTypeLabel(alert.alert_type) }}
+                  </span>
+                </td>
+                <td class="center">
+                  <span [class]="'confidence ' + getConfidenceColor(alert.confidence_level)">
+                    {{ (alert.confidence_level * 100).toFixed(0) }}%
+                  </span>
+                </td>
+              </tr>
+            }
+            @if (filteredAlerts.length === 0) {
+              <tr class="empty-row">
+                <td colspan="7">No se encontraron alertas con los filtros aplicados.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  </div>
 </div>
