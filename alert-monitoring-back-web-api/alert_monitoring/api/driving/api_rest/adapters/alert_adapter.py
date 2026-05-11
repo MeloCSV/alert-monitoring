@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
-from alert_monitoring.api.driving.api_rest.models.alert_request import AlertUploadRequest, ElasticUploadRequest
+from alert_monitoring.api.driving.api_rest.models.alert_request import ElasticUploadRequest
 from alert_monitoring.api.driving.api_rest.models.alert_response import AlertResponse
 from alert_monitoring.api.driving.api_rest.mappers.alert_dto_mapper import AlertDTOMapper
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
@@ -18,18 +18,18 @@ from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 router = APIRouter()
 
 
-@router.post('/alerts/upload', tags=['alerts'], status_code=201,
+@router.post('/alerts/sync', tags=['alerts'], status_code=201,
              responses={
-                 400: {'model': str},
                  500: {'model': str}
              })
-def upload_yaml(request: AlertUploadRequest,
-                alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
-                logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
-    logger.info('upload_yaml')
-    alert_service.save_alerts(request.yaml_content)
+
+def sync_prometheus_alerts(alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
+                           logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
+    logger.info('sync_prometheus_alerts')
+    saved = alert_service.sync_prometheus_alerts()
     return JSONResponse(status_code=status.HTTP_201_CREATED,
-                        content={"message": "Alertas guardadas correctamente"})
+                        content={"message": "Alertas de Prometheus sincronizadas correctamente",
+                                 "saved": saved})
 
 
 @router.post('/alerts/upload/elastic', tags=['alerts'], status_code=201,
