@@ -19,3 +19,5 @@ class AlertDB(SQLModel, table=True):
     notification_channel: Optional[str] = None
     alert_type: str = Field(default= "Ad-hoc")
     is_overridden: bool = Field(default= False)
+    excluded_namespaces: Optional[str] = None
+    included_namespaces: Optional[str] = None
