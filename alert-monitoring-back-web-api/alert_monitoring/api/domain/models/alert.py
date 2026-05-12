@@ -15,7 +15,6 @@ class Alert(BaseModel):
     microservice: Optional[str] = Field(None, description="Microservicio al que pertenece")
     solution: Optional[str] = Field(None, description="PI frabricado")
     notification_channel: Optional[str] = Field(None, description="Canal o destino de notificación")
-    confidence_level: float = Field(0.0, ge=0.0, le=1.0, description="Nivel de confianza del mapeo (0.0 a 1.0)")
 
     alert_type: Literal["Por Defecto", "Ad-hoc"] = Field(
         default="Ad-hoc", 

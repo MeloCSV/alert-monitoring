@@ -17,6 +17,5 @@ class AlertDB(SQLModel, table=True):
     microservice: Optional[str] = None
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
-    confidence_level: float
     alert_type: str = Field(default= "Ad-hoc")
     is_overridden: bool = Field(default= False)

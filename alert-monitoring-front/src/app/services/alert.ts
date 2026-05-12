@@ -12,7 +12,6 @@ export interface Alert {
   microservice: string | null;
   solution: string | null;
   notification_channel: string | null;
-  confidence_level: number;
   alert_type: 'Por Defecto' | 'Ad-hoc';
   is_overridden: boolean;
 }
