@@ -74,12 +74,14 @@ export class AlertTableComponent implements OnInit {
       bucket.push(alert);
       byName.set(alert.name, bucket);
     }
+    const targetMicroservices = this.microserviceName
+      ? [this.microserviceName]
+      : this.microserviceOptions;
     const result: Alert[] = [];
     for (const [, bucket] of byName) {
       const representative = bucket[0];
-      const overridden = this.microserviceName
-        ? !bucket.some(a => this.ruleAppliesToMicroservice(a, this.microserviceName))
-        : false;
+      const overridden = targetMicroservices.length > 0
+        && !targetMicroservices.some(ms => bucket.some(a => this.ruleAppliesToMicroservice(a, ms)));
       result.push({ ...representative, is_overridden: overridden });
     }
     return result;
