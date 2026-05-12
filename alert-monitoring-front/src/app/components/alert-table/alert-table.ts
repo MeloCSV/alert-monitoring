@@ -77,14 +77,26 @@ export class AlertTableComponent implements OnInit {
     const targetMicroservices = this.microserviceName
       ? [this.microserviceName]
       : this.microserviceOptions;
+    const solutionAdhoc = this.alerts.filter(a => {
+      if (a.alert_type !== 'Ad-hoc' || a.solution !== this.solutionName) return false;
+      if (this.microserviceName && a.microservice !== this.microserviceName) return false;
+      return true;
+    });
     const result: Alert[] = [];
     for (const [, bucket] of byName) {
       const representative = bucket[0];
-      const overridden = targetMicroservices.length > 0
+      const defaultBaseName = this.alertBaseName(representative.name);
+      const excludedByNamespace = targetMicroservices.length > 0
         && !targetMicroservices.some(ms => bucket.some(a => this.ruleAppliesToMicroservice(a, ms)));
-      result.push({ ...representative, is_overridden: overridden });
+      const overriddenByAdhoc = solutionAdhoc.some(a => this.alertBaseName(a.name) === defaultBaseName);
+      result.push({ ...representative, is_overridden: excludedByNamespace || overriddenByAdhoc });
     }
     return result;
+  }
+
+  private alertBaseName(name: string): string {
+    const idx = name.indexOf('_');
+    return idx >= 0 ? name.slice(idx + 1) : name;
   }
 
   get adhocAlerts(): Alert[] {
