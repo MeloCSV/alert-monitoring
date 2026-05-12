@@ -43,6 +43,8 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
                 query = query.filter(AlertDB.solution.ilike(f"%{filters.solution}%"))
             if filters.alert_type:
                 query = query.filter(AlertDB.alert_type == filters.alert_type)
+            if filters.is_overridden is not None:
+                query = query.filter(AlertDB.is_overridden == filters.is_overridden)
 
         alerts_db = query.all()
 

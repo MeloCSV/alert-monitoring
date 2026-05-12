@@ -12,8 +12,12 @@ export interface Alert {
   microservice: string | null;
   solution: string | null;
   notification_channel: string | null;
+  confidence_level: number;
   alert_type: 'Por Defecto' | 'Ad-hoc';
+  is_overridden: boolean;
   excluded_namespaces: string[];
+  target_namespaces: string[];
+  category: string | null;
 }
 
 @Injectable({
