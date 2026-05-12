@@ -45,11 +45,11 @@ class PrometheusMapper:
         if labels.get("canal"):
             return labels["canal"]
         if labels.get("msteams") == "true":
-            return "msteams"
+            return "Teams"
         if labels.get("omi") == "true":
-            return "omi"
+            return "ServiceNow"
         if labels.get("jira") == "true":
-            return "jira"
+            return "Jira"
         return None
 
     def _infer_microservice(self, rule: PrometheusRule) -> Tuple[Optional[str], float]:
@@ -73,7 +73,7 @@ class PrometheusMapper:
             if ns_match:
                 return self._clean(ns_match.group(1)), 0.7
             if project_id_match:
-                return self._clean(project_id_match.group(1)), 0,5
+                return self._clean(project_id_match.group(1)), 0.5
 
         if rule.group_name:
             return rule.group_name.replace(".rules", ""), 0.3
