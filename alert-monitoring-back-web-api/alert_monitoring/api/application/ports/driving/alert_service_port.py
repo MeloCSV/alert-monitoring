@@ -6,7 +6,7 @@ from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 class AlertServicePort(ABC):
 
     @abstractmethod
-    def save_alerts(self, yaml_content: str) -> None:
+    def sync_prometheus_alerts(self) -> int:
         pass
 
     @abstractmethod

@@ -1,33 +1,24 @@
-import yaml
 import logging
 from typing import List
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 
+from alert_monitoring.api.driven.prometheus_repository.clients.kubernetes_prometheus_client import ( KubernetesPrometheusClient)
+from alert_monitoring.api.driven.prometheus_repository.config.cluster_settings import load_clusters_from_env
+from alert_monitoring.api.driven.prometheus_repository.models.cluster_config import ClusterConfig
+
 logger = logging.getLogger(__name__)
 
 class PrometheusAdapter:
-    def load_rules(self, yaml_content: str) -> List[PrometheusRule]:
-        try:
-            data = yaml.safe_load(yaml_content)
-        except yaml.YAMLError as exc:
-            logger.error(f"Error al parsear el YAML de Prometheus: {exc}")
+        
+    def __init__(self, client: KubernetesPrometheusClient | None = None) -> None:
+        self.client = client or KubernetesPrometheusClient()
+    
+    def fetch_rules(self, clusters: List[ClusterConfig] | None = None) -> List[PrometheusRule]:
+        clusters = clusters if clusters is not None else load_clusters_from_env()
+        if not clusters:
             return []
-
-        if not data or not isinstance(data, dict):
-            logger.warning("El contenido del YAML está vacío o no es un diccionario válido.")
-            return []
-
-        rules = []
-        for group in data.get("spec", {}).get("groups", []):
-            group_name = group.get("name", "")
-            for rule in group.get("rules", []):
-                if "alert" not in rule:
-                    continue
-                rules.append(PrometheusRule(
-                    alert=rule.get("alert"),
-                    expr=rule.get("expr", ""),
-                    labels=rule.get("labels", {}),
-                    annotations=rule.get("annotations", {}),
-                    group_name=group_name
-                ))
+        rules: List[PrometheusRule] = []
+        for cluster in clusters:
+            logger.info("Recogiendo PrometheusRules del cluster %s", cluster.name)
+            rules.extend(self.client.fetch_rules(cluster))
         return rules

@@ -30,11 +30,12 @@ class AlertService(AlertServicePort):
         self.elastic_mapper = ElasticMapper()
         self.logger = logger
 
-    def save_alerts(self, yaml_content: str) -> None:
-        self.logger.info('save_alerts')
-        rules = self.prometheus_adapter.load_rules(yaml_content)
+    def sync_prometheus_alerts(self) -> int:
+        self.logger.info('sync_prometheus_alerts')
+        rules = self.prometheus_adapter.fetch_rules()
         alerts = self.prometheus_mapper.to_domain(rules)
         self.save_use_case.execute(alerts)
+        return len(alerts)
 
     def save_elastic_alerts(self, json_content: str) -> None:
         self.logger.info('save_elastic_alerts')
