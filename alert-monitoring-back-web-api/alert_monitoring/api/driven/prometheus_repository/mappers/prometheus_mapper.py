@@ -73,7 +73,7 @@ class PrometheusMapper:
             if ns_match:
                 return self._clean(ns_match.group(1)), 0.7
             if project_id_match:
-                return self._clean(project_id_match.group(1)), 0,5
+                return self._clean(project_id_match.group(1)), 0.5
 
         if rule.group_name:
             return rule.group_name.replace(".rules", ""), 0.3
