@@ -16,12 +16,8 @@ class AlertDBMapper:
             microservice=alert.microservice,
             solution=alert.solution,
             notification_channel=alert.notification_channel,
-            confidence_level=alert.confidence_level,
             alert_type=alert.alert_type,
-            is_overridden=alert.is_overridden,
             excluded_namespaces=alert.excluded_namespaces or [],
-            target_namespaces=alert.target_namespaces or [],
-            category=alert.category,
         )
 
     def to_domain(self, alert_db: AlertDB) -> Alert:
@@ -35,12 +31,8 @@ class AlertDBMapper:
             microservice=alert_db.microservice,
             solution=alert_db.solution,
             notification_channel=alert_db.notification_channel,
-            confidence_level=alert_db.confidence_level,
             alert_type=alert_db.alert_type,
-            is_overridden=alert_db.is_overridden,
             excluded_namespaces=alert_db.excluded_namespaces or [],
-            target_namespaces=alert_db.target_namespaces or [],
-            category=alert_db.category,
         )
 
     def to_domain_list(self, alerts_db: List[AlertDB]) -> List[Alert]:

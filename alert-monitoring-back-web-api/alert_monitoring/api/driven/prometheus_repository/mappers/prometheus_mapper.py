@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Optional
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.domain.models.alert import Alert
 
@@ -13,72 +13,37 @@ class PrometheusMapper:
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
-        annotations = rule.annotations
-
-        description = annotations.get("message", "Sin descripción")
-        severity = labels.get("severity", "unknown")
-        solution = labels.get("solucion", "unknown")
-        channel = self._infer_channel(labels)
-
-        alert_type = self._infer_alert_type(rule)
-        excluded_namespaces = self._extract_namespace_patterns(rule.expr, negation=True)
-        target_namespaces = self._extract_namespace_patterns(rule.expr, negation=False)
-        category = self._infer_category(rule.alert)
-
-        microservice, base_confidence = self._infer_microservice(rule, alert_type, target_namespaces)
-        confidence = base_confidence if solution else max(0.0, base_confidence - 0.2)
-
-        env_list, env_source = self._infer_environments(rule)
-        if env_source == "expr":
-            confidence = max(0.0, confidence - 0.15)
-        elif env_source is None:
-            confidence = max(0.0, confidence - 0.25)
 
         return Alert(
             name=rule.alert,
-            description=description,
+            description=rule.annotations.get("message", "Sin descripción"),
             source_tool="Prometheus",
-            severity=severity,
+            severity=labels.get("severity", "unknown"),
             condition=rule.expr,
-            environments=env_list,
-            microservice=microservice,
-            solution=solution,
-            notification_channel=channel,
-            confidence_level=round(confidence, 2),
-            alert_type=alert_type,
-            excluded_namespaces=excluded_namespaces,
-            target_namespaces=target_namespaces,
-            category=category,
+            environments=self._label_value(labels, "environment"),
+            microservice=self._label_or_none(labels, "namespace"),
+            solution=labels.get("solucion") or None,
+            notification_channel=labels.get("canal") or None,
+            alert_type="Por Defecto" if str(labels.get("alertype", "")).lower() == "default" else "Ad-hoc",
+            excluded_namespaces=self._excluded_namespaces(rule.expr),
         )
 
-    def _infer_alert_type(self, rule: PrometheusRule) -> str:
-        if str(rule.labels.get("alertype", "")).lower() == "default":
-            return "Por Defecto"
-        if rule.alert and rule.alert.startswith("Default_"):
-            return "Por Defecto"
-        if rule.group_name and rule.group_name.lower().startswith("default"):
-            return "Por Defecto"
-        return "Ad-hoc"
-
-    def _infer_category(self, alert_name: str) -> Optional[str]:
-        if not alert_name:
+    def _label_or_none(self, labels: dict, key: str) -> Optional[str]:
+        value = labels.get(key)
+        if not value or "{{" in str(value):
             return None
-        if alert_name.startswith("Default_"):
-            return alert_name[len("Default_"):]
-        return alert_name
+        return str(value)
 
-    def _extract_namespace_patterns(self, expr: str, negation: bool) -> List[str]:
+    def _label_value(self, labels: dict, key: str) -> List[str]:
+        value = self._label_or_none(labels, key)
+        return [value] if value else []
+
+    def _excluded_namespaces(self, expr: str) -> List[str]:
         if not expr:
             return []
-        operator = "!~" if negation else "=~"
-        pattern = (
-            r'(?:namespace|exported_namespace)\s*'
-            + re.escape(operator)
-            + r'\s*"([^"]+)"'
-        )
         found: List[str] = []
         seen = set()
-        for raw in re.findall(pattern, expr):
+        for raw in re.findall(r'(?:namespace|exported_namespace)\s*!~\s*"([^"]+)"', expr):
             for part in raw.split("|"):
                 cleaned = part.strip()
                 if not cleaned or cleaned in seen:
@@ -86,79 +51,3 @@ class PrometheusMapper:
                 seen.add(cleaned)
                 found.append(cleaned)
         return found
-
-    def _infer_channel(self, labels: dict) -> Optional[str]:
-        if labels.get("canal"):
-            return labels["canal"]
-        if labels.get("msteams") == "true":
-            return "msteams"
-        if labels.get("omi") == "true":
-            return "omi"
-        if labels.get("jira") == "true":
-            return "jira"
-        return None
-
-    def _infer_microservice(
-        self,
-        rule: PrometheusRule,
-        alert_type: str,
-        target_namespaces: List[str],
-    ) -> Tuple[Optional[str], float]:
-        labels = rule.labels
-        expr = rule.expr
-
-        if labels.get("service"):
-            return labels["service"], 0.9
-        ns_label = labels.get("namespace")
-        if ns_label and "{{" not in str(ns_label):
-            return ns_label, 0.85
-        if labels.get("job"):
-            return labels["job"], 0.85
-
-        if alert_type == "Por Defecto":
-            if target_namespaces:
-                return self._clean(target_namespaces[0]), 0.5
-            return None, 0.2
-
-        if expr:
-            job_match = re.search(r'job=(?:~)?["\']([^"\']+)["\']', expr)
-            ns_match = re.search(r'(?:namespace|exported_namespace)=~?["\']([^"\']+)["\']', expr)
-            project_id_match = re.search(r'project_id=(?:~)?["\']([^"\']+)["\']', expr)
-
-            if ns_match:
-                return self._clean(ns_match.group(1).split("|")[0]), 0.7
-            if job_match:
-                return self._clean(job_match.group(1)), 0.7
-            if project_id_match:
-                return self._clean(project_id_match.group(1)), 0.5
-
-        if rule.group_name:
-            return rule.group_name.replace(".rules", ""), 0.3
-
-        return None, 0.0
-
-    def _infer_environments(self, rule: PrometheusRule) -> Tuple[list, Optional[str]]:
-        labels = rule.labels
-        expr = rule.expr
-
-        label_envs = []
-        for key in ["environment", "env"]:
-            val = labels.get(key, "").lower()
-            if val and "{{" not in val:
-                label_envs.append(val)
-        if label_envs:
-            return label_envs, "label"
-
-        expr_envs = set()
-        for match in re.findall(r'environment(?:=~|=)["\']([^"\']+)["\']', expr):
-            for part in re.split(r'\|', match):
-                clean = self._clean(part)
-                if clean:
-                    expr_envs.add(clean)
-        if expr_envs:
-            return list(expr_envs), "expr"
-
-        return [], None
-
-    def _clean(self, value: str) -> str:
-        return value.replace(".*", "").replace(".+", "").replace("^", "").replace("$", "").strip()

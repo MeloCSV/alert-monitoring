@@ -10,4 +10,3 @@ class AlertFilter(BaseModel):
     microservice: Optional[str] = Field(None, description="Filtro por microservicio (coincidencia parcial)")
     solution: Optional[str] = Field(None, description="PI fabricado (coincidencia parcial)")
     alert_type: Optional[Literal["Por Defecto", "Ad-hoc"]] = Field( None, description="Tipo de alerta: Por Defecto o Ad-hoc")
-    is_overridden: Optional[bool] = Field(None, description="Si la alerta Por Defecto ha sido sustituida por una Ad-hoc")

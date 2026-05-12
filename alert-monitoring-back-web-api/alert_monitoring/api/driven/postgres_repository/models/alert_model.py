@@ -1,7 +1,6 @@
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
-import uuid
 
 class AlertDB(SQLModel, table=True):
     __tablename__ = "alerts"
@@ -17,9 +16,5 @@ class AlertDB(SQLModel, table=True):
     microservice: Optional[str] = None
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
-    confidence_level: float
-    alert_type: str = Field(default= "Ad-hoc")
-    is_overridden: bool = Field(default= False)
+    alert_type: str = Field(default="Ad-hoc")
     excluded_namespaces: List[str] = Field(default=[], sa_column=Column(JSON))
-    target_namespaces: List[str] = Field(default=[], sa_column=Column(JSON))
-    category: Optional[str] = None
