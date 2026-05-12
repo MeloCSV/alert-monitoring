@@ -74,11 +74,12 @@ export class AlertTableComponent implements OnInit {
       bucket.push(alert);
       byName.set(alert.name, bucket);
     }
+    const targets = this.overrideTargets;
     const result: Alert[] = [];
     for (const [, bucket] of byName) {
       const representative = bucket[0];
-      const overridden = this.microserviceName
-        ? !bucket.some(a => this.ruleAppliesToMicroservice(a, this.microserviceName))
+      const overridden = targets.length > 0
+        ? bucket.some(a => targets.some(ms => this.microserviceIsExcepted(a, ms)))
         : false;
       result.push({ ...representative, is_overridden: overridden });
     }
@@ -95,13 +96,22 @@ export class AlertTableComponent implements OnInit {
     });
   }
 
-  private ruleAppliesToMicroservice(alert: Alert, microservice: string): boolean {
+  private get overrideTargets(): string[] {
+    if (!this.solutionName) return [];
+    const set = new Set<string>();
+    for (const a of this.alerts) {
+      if (a.solution === this.solutionName && a.microservice) set.add(a.microservice);
+    }
+    set.add(this.solutionName);
+    return Array.from(set);
+  }
+
+  private microserviceIsExcepted(alert: Alert, microservice: string): boolean {
     const hasInclude = !!alert.included_namespaces;
     const hasExclude = !!alert.excluded_namespaces;
-    if (!hasInclude && !hasExclude) return true;
-    if (hasInclude && !this.matchesPrometheusPattern(microservice, alert.included_namespaces)) return false;
-    if (hasExclude && this.matchesPrometheusPattern(microservice, alert.excluded_namespaces)) return false;
-    return true;
+    if (hasExclude && this.matchesPrometheusPattern(microservice, alert.excluded_namespaces)) return true;
+    if (hasInclude && !this.matchesPrometheusPattern(microservice, alert.included_namespaces)) return true;
+    return false;
   }
 
   private matchesPrometheusPattern(value: string, pattern: string | null): boolean {
