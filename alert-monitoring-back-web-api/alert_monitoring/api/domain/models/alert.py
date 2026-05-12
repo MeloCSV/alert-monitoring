@@ -17,10 +17,18 @@ class Alert(BaseModel):
     notification_channel: Optional[str] = Field(None, description="Canal o destino de notificación")
 
     alert_type: Literal["Por Defecto", "Ad-hoc"] = Field(
-        default="Ad-hoc", 
+        default="Ad-hoc",
         description="Indica si es un alertado por defecto o Ad-hoc"
     )
     is_overridden: bool = Field(
-        default=False, 
+        default=False,
         description="True si esta alerta 'Por Defecto' ha sido deshabilitada/sustituida por una versión Ad-hoc"
+    )
+    excluded_namespaces: Optional[str] = Field(
+        default=None,
+        description="Regex de namespaces excluidos (namespace!~) en la regla por defecto"
+    )
+    included_namespaces: Optional[str] = Field(
+        default=None,
+        description="Regex de namespaces incluidos (namespace=~) en la regla por defecto crítica"
     )

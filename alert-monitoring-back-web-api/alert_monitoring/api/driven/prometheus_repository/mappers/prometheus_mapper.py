@@ -22,6 +22,15 @@ class PrometheusMapper:
         microservice = self._infer_microservice(rule)
         env_list, _ = self._infer_environments(rule)
 
+        is_default = str(labels.get("alertype", "")).lower() == "default"
+        alert_type = "Por Defecto" if is_default else "Ad-hoc"
+
+        excluded_namespaces = None
+        included_namespaces = None
+        if is_default:
+            excluded_namespaces = self._extract_namespace_pattern(rule.expr, exclude=True)
+            included_namespaces = self._extract_namespace_pattern(rule.expr, exclude=False)
+
         return Alert(
             name=rule.alert,
             description=description,
@@ -32,7 +41,26 @@ class PrometheusMapper:
             microservice=microservice,
             solution=solution,
             notification_channel=channel,
+            alert_type=alert_type,
+            excluded_namespaces=excluded_namespaces,
+            included_namespaces=included_namespaces,
         )
+
+    _NAMESPACE_LABEL_KEYS = ("namespace", "backend_target_name", "backend_name")
+
+    def _extract_namespace_pattern(self, expr: str, exclude: bool) -> Optional[str]:
+        if not expr:
+            return None
+        operator = "!~" if exclude else "=~"
+        patterns: list[str] = []
+        for key in self._NAMESPACE_LABEL_KEYS:
+            regex = rf'{key}\s*{re.escape(operator)}\s*"([^"]+)"'
+            for match in re.findall(regex, expr):
+                if match not in patterns:
+                    patterns.append(match)
+        if not patterns:
+            return None
+        return "|".join(patterns)
     _CANAL_DISPLAY_NAMES = {
         "msteams": "Teams",
         "omi": "ServiceNow",

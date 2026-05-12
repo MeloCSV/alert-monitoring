@@ -59,23 +59,58 @@ export class AlertTableComponent implements OnInit {
     );
   }
 
-  private get baseFilteredAlerts(): Alert[] {
-    if (!this.solutionName) return [];
-    return this.alerts.filter(alert => {
-      if (alert.solution !== this.solutionName) return false;
-      if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
-      if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
-      if (this.severity && alert.severity.toLowerCase() !== this.severity) return false;
-      return true;
-    });
+  private passesCommonFilters(alert: Alert): boolean {
+    if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
+    if (this.severity && alert.severity.toLowerCase() !== this.severity) return false;
+    return true;
   }
 
   get defaultAlerts(): Alert[] {
-    return this.baseFilteredAlerts.filter(a => a.alert_type === 'Por Defecto');
+    if (!this.solutionName) return [];
+    const defaults = this.alerts.filter(a => a.alert_type === 'Por Defecto' && this.passesCommonFilters(a));
+    const byName = new Map<string, Alert[]>();
+    for (const alert of defaults) {
+      const bucket = byName.get(alert.name) ?? [];
+      bucket.push(alert);
+      byName.set(alert.name, bucket);
+    }
+    const result: Alert[] = [];
+    for (const [, bucket] of byName) {
+      const representative = bucket[0];
+      const overridden = this.microserviceName
+        ? !bucket.some(a => this.ruleAppliesToMicroservice(a, this.microserviceName))
+        : false;
+      result.push({ ...representative, is_overridden: overridden });
+    }
+    return result;
   }
 
   get adhocAlerts(): Alert[] {
-    return this.baseFilteredAlerts.filter(a => a.alert_type === 'Ad-hoc');
+    if (!this.solutionName) return [];
+    return this.alerts.filter(alert => {
+      if (alert.alert_type !== 'Ad-hoc') return false;
+      if (alert.solution !== this.solutionName) return false;
+      if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
+      return this.passesCommonFilters(alert);
+    });
+  }
+
+  private ruleAppliesToMicroservice(alert: Alert, microservice: string): boolean {
+    const hasInclude = !!alert.included_namespaces;
+    const hasExclude = !!alert.excluded_namespaces;
+    if (!hasInclude && !hasExclude) return true;
+    if (hasInclude && !this.matchesPrometheusPattern(microservice, alert.included_namespaces)) return false;
+    if (hasExclude && this.matchesPrometheusPattern(microservice, alert.excluded_namespaces)) return false;
+    return true;
+  }
+
+  private matchesPrometheusPattern(value: string, pattern: string | null): boolean {
+    if (!pattern) return false;
+    try {
+      return new RegExp(`^(?:${pattern})$`).test(value);
+    } catch {
+      return false;
+    }
   }
 
   get hasSolutionSelected(): boolean {
