@@ -15,6 +15,9 @@ export interface Alert {
   confidence_level: number;
   alert_type: 'Por Defecto' | 'Ad-hoc';
   is_overridden: boolean;
+  excluded_namespaces: string[];
+  target_namespaces: string[];
+  category: string | null;
 }
 
 @Injectable({

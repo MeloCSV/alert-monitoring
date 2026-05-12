@@ -20,3 +20,6 @@ class AlertDB(SQLModel, table=True):
     confidence_level: float
     alert_type: str = Field(default= "Ad-hoc")
     is_overridden: bool = Field(default= False)
+    excluded_namespaces: List[str] = Field(default=[], sa_column=Column(JSON))
+    target_namespaces: List[str] = Field(default=[], sa_column=Column(JSON))
+    category: Optional[str] = None

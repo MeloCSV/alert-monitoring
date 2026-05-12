@@ -6,6 +6,7 @@ from alert_monitoring.api.domain.models.alert import Alert
 
 logger = logging.getLogger(__name__)
 
+
 class PrometheusMapper:
     def to_domain(self, rules: List[PrometheusRule]) -> List[Alert]:
         return [self._map_rule(rule) for rule in rules]
@@ -19,7 +20,12 @@ class PrometheusMapper:
         solution = labels.get("solucion", "unknown")
         channel = self._infer_channel(labels)
 
-        microservice, base_confidence = self._infer_microservice(rule)
+        alert_type = self._infer_alert_type(rule)
+        excluded_namespaces = self._extract_namespace_patterns(rule.expr, negation=True)
+        target_namespaces = self._extract_namespace_patterns(rule.expr, negation=False)
+        category = self._infer_category(rule.alert)
+
+        microservice, base_confidence = self._infer_microservice(rule, alert_type, target_namespaces)
         confidence = base_confidence if solution else max(0.0, base_confidence - 0.2)
 
         env_list, env_source = self._infer_environments(rule)
@@ -38,8 +44,48 @@ class PrometheusMapper:
             microservice=microservice,
             solution=solution,
             notification_channel=channel,
-            confidence_level=round(confidence, 2)
+            confidence_level=round(confidence, 2),
+            alert_type=alert_type,
+            excluded_namespaces=excluded_namespaces,
+            target_namespaces=target_namespaces,
+            category=category,
         )
+
+    def _infer_alert_type(self, rule: PrometheusRule) -> str:
+        if str(rule.labels.get("alertype", "")).lower() == "default":
+            return "Por Defecto"
+        if rule.alert and rule.alert.startswith("Default_"):
+            return "Por Defecto"
+        if rule.group_name and rule.group_name.lower().startswith("default"):
+            return "Por Defecto"
+        return "Ad-hoc"
+
+    def _infer_category(self, alert_name: str) -> Optional[str]:
+        if not alert_name:
+            return None
+        if alert_name.startswith("Default_"):
+            return alert_name[len("Default_"):]
+        return alert_name
+
+    def _extract_namespace_patterns(self, expr: str, negation: bool) -> List[str]:
+        if not expr:
+            return []
+        operator = "!~" if negation else "=~"
+        pattern = (
+            r'(?:namespace|exported_namespace)\s*'
+            + re.escape(operator)
+            + r'\s*"([^"]+)"'
+        )
+        found: List[str] = []
+        seen = set()
+        for raw in re.findall(pattern, expr):
+            for part in raw.split("|"):
+                cleaned = part.strip()
+                if not cleaned or cleaned in seen:
+                    continue
+                seen.add(cleaned)
+                found.append(cleaned)
+        return found
 
     def _infer_channel(self, labels: dict) -> Optional[str]:
         if labels.get("canal"):
@@ -52,28 +98,39 @@ class PrometheusMapper:
             return "jira"
         return None
 
-    def _infer_microservice(self, rule: PrometheusRule) -> Tuple[Optional[str], float]:
+    def _infer_microservice(
+        self,
+        rule: PrometheusRule,
+        alert_type: str,
+        target_namespaces: List[str],
+    ) -> Tuple[Optional[str], float]:
         labels = rule.labels
         expr = rule.expr
 
         if labels.get("service"):
             return labels["service"], 0.9
-        if labels.get("namespace"):
-            return labels["namespace"], 0.85
+        ns_label = labels.get("namespace")
+        if ns_label and "{{" not in str(ns_label):
+            return ns_label, 0.85
         if labels.get("job"):
             return labels["job"], 0.85
 
+        if alert_type == "Por Defecto":
+            if target_namespaces:
+                return self._clean(target_namespaces[0]), 0.5
+            return None, 0.2
+
         if expr:
             job_match = re.search(r'job=(?:~)?["\']([^"\']+)["\']', expr)
-            ns_match = re.search(r'namespace=(?:~)?["\']([^"\']+)["\']', expr)
+            ns_match = re.search(r'(?:namespace|exported_namespace)=~?["\']([^"\']+)["\']', expr)
             project_id_match = re.search(r'project_id=(?:~)?["\']([^"\']+)["\']', expr)
 
+            if ns_match:
+                return self._clean(ns_match.group(1).split("|")[0]), 0.7
             if job_match:
                 return self._clean(job_match.group(1)), 0.7
-            if ns_match:
-                return self._clean(ns_match.group(1)), 0.7
             if project_id_match:
-                return self._clean(project_id_match.group(1)), 0,5
+                return self._clean(project_id_match.group(1)), 0.5
 
         if rule.group_name:
             return rule.group_name.replace(".rules", ""), 0.3
