@@ -23,7 +23,11 @@ class ElasticMapper:
             microservice=rule.microservice,
             solution=None,
             notification_channel=rule.canal,
-            confidence_level=round(confidence, 2)
+            confidence_level=round(confidence, 2),
+            alert_type="Ad-hoc",
+            excluded_namespaces=[],
+            target_namespaces=[rule.microservice] if rule.microservice else [],
+            category=rule.name,
         )
 
     def _calculate_confidence(self, rule: ElasticRule) -> float:

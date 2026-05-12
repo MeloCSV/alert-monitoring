@@ -2,7 +2,7 @@
   <div class="card">
     <header class="card-header">
       <h1>Alertas</h1>
-      <p class="subtitle">Selecciona tu aplicación para ver todo el alarmado asociado.</p>
+      <p class="subtitle">Selecciona tu aplicación para ver el alarmado por defecto y ad hoc asociado. El alarmado por defecto excepcionado o sustituido por uno ad hoc aparecerá tachado.</p>
     </header>
 
     <section class="filters">
@@ -109,7 +109,7 @@
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
                           @if (alert.is_overridden) {
-                            <span class="overridden-tag">Sustituida</span>
+                            <span class="overridden-tag">{{ overrideLabel(alert) }}</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
