@@ -2,114 +2,71 @@
   <div class="card">
     <header class="card-header">
       <h1>Alertas</h1>
+      <p class="subtitle">Selecciona tu aplicación para ver todo el alarmado asociado.</p>
     </header>
 
     <section class="filters">
-      <div class="filters-row">
-        <span class="filters-label">Filtrar por:</span>
-
-        <div class="filter">
-          <label>Nombre alarma</label>
-          <app-searchable-select
-            [options]="alarmNameOptions"
-            placeholder="Todas las alarmas"
-            [value]="alarmName"
-            (valueChange)="alarmName = $event"
-          ></app-searchable-select>
-        </div>
-
-        <div class="filter">
-          <label>Nombre solución</label>
+      <div class="filters-mandatory">
+        <div class="filter solution-filter">
+          <label>Aplicación <span class="required">*</span></label>
           <app-searchable-select
             [options]="solutionOptions"
-            placeholder="Todas las soluciones"
+            placeholder="Selecciona una aplicación"
             [value]="solutionName"
-            (valueChange)="solutionName = $event"
+            (valueChange)="onSolutionChange($event)"
           ></app-searchable-select>
         </div>
 
-        <div class="filter">
-          <label>Nombre de microservicio</label>
-          <app-searchable-select
-            [options]="microserviceOptions"
-            placeholder="Todos los microservicios"
-            [value]="microserviceName"
-            (valueChange)="microserviceName = $event"
-          ></app-searchable-select>
-        </div>
-
-        <div class="filter">
-          <label>Entorno</label>
-          <select [(ngModel)]="environment" class="select">
-            <option value="">Todos los entornos</option>
-            <option value="dev">Dev</option>
-            <option value="itg">Itg</option>
-            <option value="pre">Pre</option>
-            <option value="pro">Pro</option>
-          </select>
-        </div>
-
-        <div class="filter">
-          <label>Severidad</label>
-          <select [(ngModel)]="severity" class="select">
-            <option value="">Todas las severidades</option>
-            <option value="warning">Warning</option>
-            <option value="critical">Critical</option>
-            <option value="principal">Principal</option>
-          </select>
-        </div>
-
-        <div class="filter">
-          <label>Tipo de alarma</label>
-          <select [(ngModel)]="alertType" class="select">
-            <option value="">Cualquier tipo de alarma</option>
-            <option value="Por Defecto">Por defecto</option>
-            <option value="Ad-hoc">Ad hoc</option>
-          </select>
-        </div>
-
-        <div class="filter search">
-          <label>&nbsp;</label>
-          <div class="search-control">
-            <input
-              type="text"
-              [(ngModel)]="globalSearch"
-              placeholder="Buscar"
-              (keydown.enter)="triggerSearch()"
-            />
-            <button type="button" class="btn-search" (click)="triggerSearch()">Buscar</button>
-          </div>
-        </div>
+        <button
+          type="button"
+          class="optional-toggle"
+          (click)="toggleOptionalFilters()"
+          [class.open]="showOptionalFilters"
+          [disabled]="!hasSolutionSelected"
+        >
+          <span class="chevron" aria-hidden="true">▾</span>
+          Filtros opcionales
+        </button>
       </div>
 
-      <div class="advanced">
-        <button type="button" class="advanced-toggle" (click)="toggleAdvanced()" [class.open]="showAdvanced">
-          <span class="chevron" aria-hidden="true">▾</span>
-          Filtros avanzados
-        </button>
-
-        @if (showAdvanced) {
-          <div class="advanced-row">
-            <div class="filter">
-              <label>Source tool</label>
-              <select [(ngModel)]="sourceTool" class="select">
-                <option value="">Todos los sources</option>
-                <option value="prometheus">Prometheus</option>
-                <option value="elastic">Elastic</option>
-              </select>
-            </div>
-
-            <div class="filter">
-              <label>is_overridden</label>
-              <select [(ngModel)]="isOverridden" class="select">
-                <option value="">Cualquiera</option>
-                <option value="yes">Sí</option>
-                <option value="no">No</option>
-              </select>
-            </div>
+      @if (showOptionalFilters && hasSolutionSelected) {
+        <div class="filters-optional">
+          <div class="filter">
+            <label>Microservicio</label>
+            <select [(ngModel)]="microserviceName" class="select">
+              <option value="">Todos los microservicios</option>
+              @for (option of microserviceOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
           </div>
-        }
-         </div>
+
+          <div class="filter">
+            <label>Entorno</label>
+            <select [(ngModel)]="environment" class="select">
+              <option value="">Todos los entornos</option>
+              <option value="dev">Dev</option>
+              <option value="itg">Itg</option>
+              <option value="pre">Pre</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+
+          <div class="filter">
+            <label>Severidad</label>
+            <select [(ngModel)]="severity" class="select">
+              <option value="">Todas las severidades</option>
+              <option value="warning">Warning</option>
+              <option value="critical">Critical</option>
+              <option value="principal">Principal</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn-clear" (click)="clearOptionalFilters()">
+            Limpiar filtros
+          </button>
+        </div>
+      }
     </section>
 
     <section class="results">
@@ -119,50 +76,88 @@
       @if (error) {
         <div class="state error">Error al cargar las alertas.</div>
       }
-      @if (!loading && !error) {
-        <table class="alert-table">
-          <thead>
-            <tr>
-              <th>Nombre de la alarma</th>
-              <th>Solución</th>
-              <th>Microservicio</th>
-              <th>Entorno</th>
-              <th class="center">Severidad</th>
-              <th class="center">Tipo de alerta</th>
-              <th class="center">Confianza</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (alert of filteredAlerts; track alert.name + '-' + alert.microservice + '-' + alert.alert_type) {
-              <tr>
-                <td>{{ alert.name }}</td>
-                <td>{{ alert.solution || '-' }}</td>
-                <td>{{ alert.microservice || '-' }}</td>
-                <td>{{ alert.environments.length ? alert.environments.join(', ') : '-' }}</td>
-                <td class="center">
-                  <span class="badge" [class]="'badge ' + getSeverityClass(alert.severity)">
-                    {{ alert.severity }}
-                  </span>
-                </td>
-                <td class="center">
-                  <span class="badge" [class]="'badge ' + getAlertTypeClass(alert.alert_type)">
-                    {{ alertTypeLabel(alert.alert_type) }}
-                  </span>
-                </td>
-                <td class="center">
-                  <span [class]="'confidence ' + getConfidenceColor(alert.confidence_level)">
-                    {{ (alert.confidence_level * 100).toFixed(0) }}%
-                  </span>
-                </td>
-              </tr>
-            }
-            @if (filteredAlerts.length === 0) {
-              <tr class="empty-row">
-                <td colspan="7">No se encontraron alertas con los filtros aplicados.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      @if (!loading && !error && !hasSolutionSelected) {
+        <div class="state empty-select">
+          Selecciona una aplicación para visualizar sus alarmas.
+        </div>
+      }
+      @if (!loading && !error && hasSolutionSelected) {
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-header default-header">
+              <h2>Alarmas por defecto</h2>
+              <span class="count">{{ defaultAlerts.length }}</span>
+            </div>
+            <div class="panel-body">
+              @if (defaultAlerts.length === 0) {
+                <div class="empty-panel">No hay alarmas por defecto.</div>
+              } @else {
+                <table class="alert-table">
+                  <thead>
+                    <tr>
+                      <th>Alarma</th>
+                      <th>Canal de salida</th>
+                      <th>Entorno</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (alert of defaultAlerts; track alert.name + '-' + alert.microservice) {
+                      <tr [class.overridden]="alert.is_overridden">
+                        <td>
+                          <div class="alert-name">{{ alert.name }}</div>
+                          @if (alert.description) {
+                            <div class="alert-desc">{{ alert.description }}</div>
+                          }
+                          @if (alert.is_overridden) {
+                            <span class="overridden-tag">Sustituida</span>
+                          }
+                        </td>
+                        <td>{{ alert.notification_channel || '-' }}</td>
+                        <td>{{ environmentsLabel(alert) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header adhoc-header">
+              <h2>Alarmas ad hoc</h2>
+              <span class="count">{{ adhocAlerts.length }}</span>
+            </div>
+            <div class="panel-body">
+              @if (adhocAlerts.length === 0) {
+                <div class="empty-panel">No hay alarmas ad hoc.</div>
+              } @else {
+                <table class="alert-table">
+                  <thead>
+                    <tr>
+                      <th>Alarma</th>
+                      <th>Canal de salida</th>
+                      <th>Entorno</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (alert of adhocAlerts; track alert.name + '-' + alert.microservice) {
+                      <tr>
+                        <td>
+                          <div class="alert-name">{{ alert.name }}</div>
+                          @if (alert.description) {
+                            <div class="alert-desc">{{ alert.description }}</div>
+                          }
+                        </td>
+                        <td>{{ alert.notification_channel || '-' }}</td>
+                        <td>{{ environmentsLabel(alert) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+        </div>
       }
     </section>
   </div>
