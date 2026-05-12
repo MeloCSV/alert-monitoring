@@ -18,10 +18,22 @@ class Alert(BaseModel):
     confidence_level: float = Field(0.0, ge=0.0, le=1.0, description="Nivel de confianza del mapeo (0.0 a 1.0)")
 
     alert_type: Literal["Por Defecto", "Ad-hoc"] = Field(
-        default="Ad-hoc", 
+        default="Ad-hoc",
         description="Indica si es un alertado por defecto o Ad-hoc"
     )
     is_overridden: bool = Field(
-        default=False, 
+        default=False,
         description="True si esta alerta 'Por Defecto' ha sido deshabilitada/sustituida por una versión Ad-hoc"
+    )
+    excluded_namespaces: List[str] = Field(
+        default_factory=list,
+        description="Patrones de namespaces (regex) excluidos en la expresión (namespace!~). Útil para alertas Por Defecto: si el namespace de una aplicación coincide, esa alerta está excepcionada para ella."
+    )
+    target_namespaces: List[str] = Field(
+        default_factory=list,
+        description="Patrones de namespaces (regex) a los que aplica la alerta (namespace=~). En defaults críticos indica el ámbito; en ad-hoc identifica los namespaces de la app."
+    )
+    category: Optional[str] = Field(
+        None,
+        description="Categoría funcional inferida (e.g. Service_Status_KO). Permite detectar si una alerta Por Defecto está machacada por otra Ad-hoc de la misma categoría."
     )
