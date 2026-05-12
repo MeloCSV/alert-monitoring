@@ -11,8 +11,6 @@ class ElasticMapper:
         return [self._map_rule(rule) for rule in rules]
 
     def _map_rule(self, rule: ElasticRule) -> Alert:
-        confidence = self._calculate_confidence(rule)
-
         return Alert(
             name=rule.name,
             description=rule.description or "Sin descripción",
@@ -23,21 +21,4 @@ class ElasticMapper:
             microservice=rule.microservice,
             solution=None,
             notification_channel=rule.canal,
-            confidence_level=round(confidence, 2)
         )
-
-    def _calculate_confidence(self, rule: ElasticRule) -> float:
-        confidence = 0.0
-
-        if rule.severity:
-            confidence += 0.3
-        if rule.canal:
-            confidence += 0.2
-        if rule.microservice:
-            confidence += 0.2
-        if rule.description:
-            confidence += 0.2
-        if rule.environment:
-            confidence += 0.1
-
-        return confidence

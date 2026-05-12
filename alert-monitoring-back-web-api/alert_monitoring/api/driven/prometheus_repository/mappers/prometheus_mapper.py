@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.domain.models.alert import Alert
 
@@ -19,14 +19,8 @@ class PrometheusMapper:
         solution = labels.get("solucion", "unknown")
         channel = self._infer_channel(labels)
 
-        microservice, base_confidence = self._infer_microservice(rule)
-        confidence = base_confidence if solution else max(0.0, base_confidence - 0.2)
-
-        env_list, env_source = self._infer_environments(rule)
-        if env_source == "expr":
-            confidence = max(0.0, confidence - 0.15)
-        elif env_source is None:
-            confidence = max(0.0, confidence - 0.25)
+        microservice = self._infer_microservice(rule)
+        env_list, _ = self._infer_environments(rule)
 
         return Alert(
             name=rule.alert,
@@ -38,7 +32,6 @@ class PrometheusMapper:
             microservice=microservice,
             solution=solution,
             notification_channel=channel,
-            confidence_level=round(confidence, 2)
         )
 
     def _infer_channel(self, labels: dict) -> Optional[str]:
@@ -52,16 +45,16 @@ class PrometheusMapper:
             return "Jira"
         return None
 
-    def _infer_microservice(self, rule: PrometheusRule) -> Tuple[Optional[str], float]:
+    def _infer_microservice(self, rule: PrometheusRule) -> Optional[str]:
         labels = rule.labels
         expr = rule.expr
 
         if labels.get("service"):
-            return labels["service"], 0.9
+            return labels["service"]
         if labels.get("namespace"):
-            return labels["namespace"], 0.85
+            return labels["namespace"]
         if labels.get("job"):
-            return labels["job"], 0.85
+            return labels["job"]
 
         if expr:
             job_match = re.search(r'job=(?:~)?["\']([^"\']+)["\']', expr)
@@ -69,16 +62,16 @@ class PrometheusMapper:
             project_id_match = re.search(r'project_id=(?:~)?["\']([^"\']+)["\']', expr)
 
             if job_match:
-                return self._clean(job_match.group(1)), 0.7
+                return self._clean(job_match.group(1))
             if ns_match:
-                return self._clean(ns_match.group(1)), 0.7
+                return self._clean(ns_match.group(1))
             if project_id_match:
-                return self._clean(project_id_match.group(1)), 0.5
+                return self._clean(project_id_match.group(1))
 
         if rule.group_name:
-            return rule.group_name.replace(".rules", ""), 0.3
+            return rule.group_name.replace(".rules", "")
 
-        return None, 0.0
+        return None
 
     def _infer_environments(self, rule: PrometheusRule) -> Tuple[list, Optional[str]]:
         labels = rule.labels
