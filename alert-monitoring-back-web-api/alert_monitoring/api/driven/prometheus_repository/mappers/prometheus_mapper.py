@@ -34,9 +34,17 @@ class PrometheusMapper:
             notification_channel=channel,
         )
 
+    _CANAL_DISPLAY_NAMES = {
+        "msteams": "Teams",
+        "mteams": "Teams",
+        "omi": "ServiceNow",
+        "jira": "Jira",
+    }
+
     def _infer_channel(self, labels: dict) -> Optional[str]:
-        if labels.get("canal"):
-            return labels["canal"]
+        canal = labels.get("canal")
+        if canal:
+            return self._CANAL_DISPLAY_NAMES.get(canal.lower(), canal)
         if labels.get("msteams") == "true":
             return "Teams"
         if labels.get("omi") == "true":
