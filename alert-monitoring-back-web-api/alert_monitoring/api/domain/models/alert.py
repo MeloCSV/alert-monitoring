@@ -11,7 +11,6 @@ class Alert(BaseModel):
 
     origin_link: Optional[str] = Field(None, description="Enlace directo a la definición")
 
-    # Campos que pueden ser deducibles o inferidos
     microservice: Optional[str] = Field(None, description="Microservicio al que pertenece")
     solution: Optional[str] = Field(None, description="PI frabricado")
     notification_channel: Optional[str] = Field(None, description="Canal o destino de notificación")
@@ -19,16 +18,4 @@ class Alert(BaseModel):
     alert_type: Literal["Por Defecto", "Ad-hoc"] = Field(
         default="Ad-hoc",
         description="Indica si es un alertado por defecto o Ad-hoc"
-    )
-    is_overridden: bool = Field(
-        default=False,
-        description="True si esta alerta 'Por Defecto' ha sido deshabilitada/sustituida por una versión Ad-hoc"
-    )
-    excluded_namespaces: Optional[str] = Field(
-        default=None,
-        description="Regex de namespaces excluidos (namespace!~) en la regla por defecto"
-    )
-    included_namespaces: Optional[str] = Field(
-        default=None,
-        description="Regex de namespaces incluidos (namespace=~) en la regla por defecto crítica"
     )

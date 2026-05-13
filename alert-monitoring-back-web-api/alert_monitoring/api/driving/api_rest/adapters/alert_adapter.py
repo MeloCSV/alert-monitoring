@@ -58,7 +58,6 @@ def get_all_alerts(name: Optional[str] = Query(None, description="Filtra por nom
     microservice: Optional[str] = Query(None, description="Filtra por microservicio (coincidencia parcial)"),
     solution: Optional[str] = Query(None, description="Filtra por solución (coincidencia parcial)"),
     alert_type: Optional[str] = Query(None, description="Por Defecto o Ad-hoc"),
-    is_overridden: Optional[bool] = Query(None, description="Si la alerta ha sido sustituida"),
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     api_rest_mapper: AlertDTOMapper = Depends(Injector.instance(AlertDTOMapper)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))
@@ -72,7 +71,6 @@ def get_all_alerts(name: Optional[str] = Query(None, description="Filtra por nom
             microservice=microservice,
             solution=solution,
             alert_type=alert_type,
-            is_overridden=is_overridden,
         )
         alerts = alert_service.get_all_alerts(filters)
         return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(api_rest_mapper.to_models_decorator(alerts)))

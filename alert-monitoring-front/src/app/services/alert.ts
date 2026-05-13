@@ -13,9 +13,7 @@ export interface Alert {
   solution: string | null;
   notification_channel: string | null;
   alert_type: 'Por Defecto' | 'Ad-hoc';
-  is_overridden: boolean;
-  excluded_namespaces: string | null;
-  included_namespaces: string | null;
+  is_overridden?: boolean;
 }
 
 export interface AlertOverride {
