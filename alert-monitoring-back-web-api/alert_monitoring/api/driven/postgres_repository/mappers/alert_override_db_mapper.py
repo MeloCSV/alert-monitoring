@@ -9,7 +9,7 @@ class AlertOverrideDBMapper:
     def to_db(self, override: AlertOverride) -> AlertOverrideDB:
         return AlertOverrideDB(
             alert_name=override.alert_name,
-            microservice=override.microservice,
+            solution=override.solution,
             is_disabled=override.is_disabled,
             is_partial=override.is_partial,
         )
@@ -17,7 +17,7 @@ class AlertOverrideDBMapper:
     def to_domain(self, db: AlertOverrideDB) -> AlertOverride:
         return AlertOverride(
             alert_name=db.alert_name,
-            microservice=db.microservice,
+            solution=db.solution,
             is_disabled=db.is_disabled,
             is_partial=db.is_partial,
         )

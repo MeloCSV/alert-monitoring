@@ -19,5 +19,5 @@ class AlertServicePort(ABC):
         pass
 
     @abstractmethod
-    def get_alert_overrides(self, microservice: Optional[str] = None) -> List[AlertOverride]:
+    def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
         pass

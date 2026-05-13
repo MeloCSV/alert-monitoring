@@ -80,10 +80,10 @@ def get_all_alerts(name: Optional[str] = Query(None, description="Filtra por nom
             responses={
                 500: {'model': str}
             })
-def get_alert_overrides(microservice: Optional[str] = Query(None, description="Filtra los overrides por microservicio"),
+def get_alert_overrides(solution: Optional[str] = Query(None, description="Filtra los overrides por aplicación"),
                         alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
                         logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
     logger.info('get_alert_overrides')
-    overrides = alert_service.get_alert_overrides(microservice)
+    overrides = alert_service.get_alert_overrides(solution)
     payload = [AlertOverrideResponse(**o.model_dump()) for o in overrides]
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
