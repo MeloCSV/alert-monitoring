@@ -10,3 +10,4 @@ class AlertOverrideDB(SQLModel, table=True):
     alert_name: str = Field(index=True)
     microservice: str = Field(index=True)
     is_disabled: bool = Field(default=False)
+    is_partial: bool = Field(default=False)

@@ -80,22 +80,28 @@ export class AlertTableComponent implements OnInit {
       bucket.push(alert);
       byName.set(alert.name, bucket);
     }
-    const disabledForMicro = this.microserviceName ? this.disabledAlertNamesFor(this.microserviceName) : null;
+    const overrideStatus = this.microserviceName ? this.overrideStatusFor(this.microserviceName) : null;
     const result: Alert[] = [];
     for (const [name, bucket] of byName) {
       const representative = bucket[0];
-      const overridden = disabledForMicro ? disabledForMicro.has(name) : false;
-      result.push({ ...representative, is_overridden: overridden });
+      const status = overrideStatus?.get(name);
+      result.push({
+        ...representative,
+        is_overridden: status === 'disabled',
+        is_partial: status === 'partial',
+      });
     }
     return result;
   }
 
-  private disabledAlertNamesFor(microservice: string): Set<string> {
-    return new Set(
-      this.overrides
-        .filter(o => o.microservice === microservice && o.is_disabled)
-        .map(o => o.alert_name)
-    );
+  private overrideStatusFor(microservice: string): Map<string, 'disabled' | 'partial'> {
+    const status = new Map<string, 'disabled' | 'partial'>();
+    for (const o of this.overrides) {
+      if (o.microservice !== microservice) continue;
+      if (o.is_disabled) status.set(o.alert_name, 'disabled');
+      else if (o.is_partial) status.set(o.alert_name, 'partial');
+    }
+    return status;
   }
 
   get adhocAlerts(): Alert[] {
