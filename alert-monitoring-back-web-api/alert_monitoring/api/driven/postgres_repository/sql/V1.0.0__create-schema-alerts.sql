@@ -9,6 +9,7 @@ CREATE TABLE public.alerts (
     microservice         VARCHAR(255)    NULL,
     solution             VARCHAR(255)    NULL,
     notification_channel VARCHAR(255)    NULL,
+    alert_type           VARCHAR(255)    NULL,
     CONSTRAINT alerts_pkey PRIMARY KEY (id)
 );
 

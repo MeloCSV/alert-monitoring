@@ -32,3 +32,5 @@ ng serve
 
 
 ssh: ssh -i ~/.ssh/id_rsa_linux -L 6444:192.168.15.173:443 ccsantam_n1_mercadona_com@bastion.utils.gcp.mercadona.com -N
+
+kubectl config view --minify --raw -o jsonpath='{.users[0].user.token}'
