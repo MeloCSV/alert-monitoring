@@ -14,12 +14,14 @@ export interface Alert {
   notification_channel: string | null;
   alert_type: 'Por Defecto' | 'Ad-hoc';
   is_overridden?: boolean;
+  is_partial?: boolean;
 }
 
 export interface AlertOverride {
   alert_name: string;
   microservice: string;
   is_disabled: boolean;
+  is_partial: boolean;
 }
 
 @Injectable({

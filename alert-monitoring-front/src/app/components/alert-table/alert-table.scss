@@ -259,3 +259,23 @@ tr.overridden {
 
   &:hover { background: rgba(179, 38, 30, 0.07); }
 }
+
+.partial-tag {
+  display: inline-block;
+  margin-top: 6px;
+  background: #fff4cc;
+  color: #8a6d00;
+  border: 1px solid #f0d97a;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+tr.partial {
+  background: rgba(240, 217, 122, 0.18);
+
+  &:hover { background: rgba(240, 217, 122, 0.28); }
+}

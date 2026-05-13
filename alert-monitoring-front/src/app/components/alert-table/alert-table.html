@@ -102,7 +102,7 @@
                   </thead>
                   <tbody>
                     @for (alert of defaultAlerts; track alert.name + '-' + alert.microservice) {
-                      <tr [class.overridden]="alert.is_overridden">
+                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial">
                         <td>
                           <div class="alert-name">{{ alert.name }}</div>
                           @if (alert.description) {
@@ -110,6 +110,8 @@
                           }
                           @if (alert.is_overridden) {
                             <span class="overridden-tag">Sustituida</span>
+                          } @else if (alert.is_partial) {
+                            <span class="partial-tag">Alarmado parcialmente</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>

@@ -11,6 +11,7 @@ class AlertOverrideDBMapper:
             alert_name=override.alert_name,
             microservice=override.microservice,
             is_disabled=override.is_disabled,
+            is_partial=override.is_partial,
         )
 
     def to_domain(self, db: AlertOverrideDB) -> AlertOverride:
@@ -18,6 +19,7 @@ class AlertOverrideDBMapper:
             alert_name=db.alert_name,
             microservice=db.microservice,
             is_disabled=db.is_disabled,
+            is_partial=db.is_partial,
         )
 
     def to_domain_list(self, items: List[AlertOverrideDB]) -> List[AlertOverride]:

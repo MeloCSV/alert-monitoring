@@ -6,6 +6,9 @@ class AlertOverride(BaseModel):
     microservice: str = Field(..., description="Microservicio para el que se evalúa la alerta")
     is_disabled: bool = Field(
         ...,
-        description="True si la alerta Por Defecto está deshabilitada para este microservicio "
-                    "(excluida en default y no incluida en default-criticas)"
+        description="True si todo el namespace está excluido en default y no re-incluido en default-criticas"
+    )
+    is_partial: bool = Field(
+        default=False,
+        description="True si solo algún job/deployment del microservicio está excluido (alarmado parcial)"
     )
