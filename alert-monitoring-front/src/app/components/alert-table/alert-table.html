@@ -102,9 +102,14 @@
                   </thead>
                   <tbody>
                     @for (alert of defaultAlerts; track alert.name + '-' + alert.microservice) {
-                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial">
+                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial" [class.blackout]="alert.is_blackout">
                         <td>
-                          <div class="alert-name">{{ alert.name }}</div>
+                          <div class="alert-name">
+                            @if (alert.is_blackout) {
+                              <span class="blackout-icon" aria-label="Silenciada" title="Silenciada en AlertManager">⊘</span>
+                            }
+                            {{ alert.name }}
+                          </div>
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
@@ -112,6 +117,9 @@
                             <span class="overridden-tag">Sustituida</span>
                           } @else if (alert.is_partial) {
                             <span class="partial-tag">Alarmado parcialmente</span>
+                          }
+                          @if (alert.is_blackout) {
+                            <span class="blackout-tag">Silenciada</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
@@ -143,11 +151,19 @@
                   </thead>
                   <tbody>
                     @for (alert of adhocAlerts; track alert.name + '-' + alert.microservice) {
-                      <tr>
+                      <tr [class.blackout]="alert.is_blackout">
                         <td>
-                          <div class="alert-name">{{ alert.name }}</div>
+                          <div class="alert-name">
+                            @if (alert.is_blackout) {
+                              <span class="blackout-icon" aria-label="Silenciada" title="Silenciada en AlertManager">⊘</span>
+                            }
+                            {{ alert.name }}
+                          </div>
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
+                          }
+                          @if (alert.is_blackout) {
+                            <span class="blackout-tag">Silenciada</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>

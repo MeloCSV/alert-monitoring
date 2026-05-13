@@ -15,6 +15,7 @@ export interface Alert {
   alert_type: 'Por Defecto' | 'Ad-hoc';
   is_overridden?: boolean;
   is_partial?: boolean;
+  is_blackout?: boolean;
 }
 
 export interface AlertOverride {
@@ -22,6 +23,22 @@ export interface AlertOverride {
   solution: string;
   is_disabled: boolean;
   is_partial: boolean;
+}
+
+export interface BlackoutMatcher {
+  name: string;
+  value: string;
+  is_regex: boolean;
+  is_equal: boolean;
+}
+
+export interface Blackout {
+  id: string;
+  matchers: BlackoutMatcher[];
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_by?: string | null;
+  comment?: string | null;
 }
 
 @Injectable({
@@ -41,5 +58,9 @@ export class AlertService {
       ? `${this.apiUrl}/overrides?solution=${encodeURIComponent(solution)}`
       : `${this.apiUrl}/overrides`;
     return this.http.get<AlertOverride[]>(url);
+  }
+
+  getBlackouts(): Observable<Blackout[]> {
+    return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`);
   }
 }

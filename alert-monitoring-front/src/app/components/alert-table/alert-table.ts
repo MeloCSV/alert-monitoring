@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
@@ -17,6 +17,7 @@ type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
 export class AlertTableComponent implements OnInit {
   alerts: Alert[] = [];
   overrides: AlertOverride[] = [];
+  blackouts: Blackout[] = [];
   loading = true;
   error = false;
 
@@ -36,10 +37,12 @@ export class AlertTableComponent implements OnInit {
     forkJoin({
       alerts: this.alertService.getAlerts(),
       overrides: this.alertService.getOverrides(),
+      blackouts: this.alertService.getBlackouts(),
     }).subscribe({
-      next: ({ alerts, overrides }) => {
+      next: ({ alerts, overrides, blackouts }) => {
         this.alerts = alerts;
         this.overrides = overrides;
+        this.blackouts = blackouts;
         this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
         this.loading = false;
         this.cdr.detectChanges();
@@ -50,6 +53,37 @@ export class AlertTableComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private matchesBlackoutValue(matcherValue: string, isRegex: boolean, isEqual: boolean, candidate: string): boolean {
+    let hit: boolean;
+    if (isRegex) {
+      try {
+        hit = new RegExp(`^(?:${matcherValue})$`).test(candidate);
+      } catch {
+        return false;
+      }
+    } else {
+      hit = matcherValue === candidate;
+    }
+    return isEqual ? hit : !hit;
+  }
+
+  private isAlertBlackedOut(alert: Alert): boolean {
+    for (const blackout of this.blackouts) {
+      const nameMatchers = blackout.matchers.filter(m => m.name === 'alertname');
+      if (nameMatchers.length === 0) continue;
+      const nameOk = nameMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, alert.name)
+      );
+      if (!nameOk) continue;
+      const severityMatchers = blackout.matchers.filter(m => m.name === 'severity');
+      const severityOk = severityMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.severity || '').toLowerCase())
+      );
+      if (severityOk) return true;
+    }
+    return false;
   }
 
   private uniqueValues(values: (string | null | undefined)[]): string[] {
@@ -89,6 +123,7 @@ export class AlertTableComponent implements OnInit {
         ...representative,
         is_overridden: status === 'disabled',
         is_partial: status === 'partial',
+        is_blackout: this.isAlertBlackedOut(representative),
       });
     }
     return result;
@@ -106,12 +141,14 @@ export class AlertTableComponent implements OnInit {
 
   get adhocAlerts(): Alert[] {
     if (!this.solutionName) return [];
-    return this.alerts.filter(alert => {
-      if (alert.alert_type !== 'Ad-hoc') return false;
-      if (alert.solution !== this.solutionName) return false;
-      if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
-      return this.passesCommonFilters(alert);
-    });
+    return this.alerts
+      .filter(alert => {
+        if (alert.alert_type !== 'Ad-hoc') return false;
+        if (alert.solution !== this.solutionName) return false;
+        if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
+        return this.passesCommonFilters(alert);
+      })
+      .map(alert => ({ ...alert, is_blackout: this.isAlertBlackedOut(alert) }));
   }
 
   get hasSolutionSelected(): boolean {

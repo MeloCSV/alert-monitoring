@@ -279,3 +279,38 @@ tr.partial {
 
   &:hover { background: rgba(240, 217, 122, 0.28); }
 }
+
+.blackout-tag {
+  display: inline-block;
+  margin-top: 6px;
+  margin-left: 6px;
+  background: #e4e7ec;
+  color: #4d4d4d;
+  border: 1px solid #c9ced6;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.blackout-icon {
+  display: inline-block;
+  margin-right: 6px;
+  color: #6b6b6b;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+tr.blackout {
+  background: #ececec;
+
+  td { color: #6b6b6b; }
+
+  .alert-name { color: #4d4d4d; }
+  .alert-desc { color: #8a8a8a; }
+
+  &:hover { background: #e0e0e0; }
+}
