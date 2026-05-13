@@ -17,15 +17,24 @@ PLURAL = "prometheusrules"
 class KubernetesPrometheusClient:
     def fetch_rules(self, cluster: ClusterConfig) -> List[PrometheusRule]:
         api = self._build_api(cluster)
-        try:
-            response = api.list_cluster_custom_object(group=GROUP, version=VERSION, plural=PLURAL)
-        except client.ApiException as exc:
-            logger.error("Error al consultar PrometheusRules en %s: %s", cluster.name, exc)
-            return []
-
         rules: List[PrometheusRule] = []
-        for item in response.get("items", []):
-            rules.extend(self._parse_item(item, cluster.name))
+        _continue = None
+
+        while True:
+            try:
+                kwargs = {"_continue": _continue} if _continue else {}
+                response = api.list_cluster_custom_object(group=GROUP, version=VERSION, plural=PLURAL, **kwargs)
+            except client.ApiException as exc:
+                logger.error("Error al consultar PrometheusRules en %s: %s", cluster.name, exc)
+                return rules
+
+            for item in response.get("items", []):
+                rules.extend(self._parse_item(item, cluster.name))
+
+            _continue = (response.get("metadata") or {}).get("continue")
+            if not _continue:
+                break
+
         return rules
 
     def _build_api(self, cluster: ClusterConfig) -> client.CustomObjectsApi:

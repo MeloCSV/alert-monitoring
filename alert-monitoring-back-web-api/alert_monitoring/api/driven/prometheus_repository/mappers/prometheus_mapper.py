@@ -14,7 +14,7 @@ class PrometheusMapper:
         labels = rule.labels
         annotations = rule.annotations
 
-        description = annotations.get("message", "Sin descripción")
+        description = annotations.get("message") or annotations.get("description") or "Sin descripción"
         severity = labels.get("severity", "unknown")
         solution = labels.get("solucion", "unknown")
         channel = self._infer_channel(labels)
