@@ -17,9 +17,6 @@ class AlertDBMapper:
             solution=alert.solution,
             notification_channel=alert.notification_channel,
             alert_type=alert.alert_type,
-            is_overridden=alert.is_overridden,
-            excluded_namespaces=alert.excluded_namespaces,
-            included_namespaces=alert.included_namespaces,
         )
 
     def to_domain(self, alert_db: AlertDB) -> Alert:
@@ -34,9 +31,6 @@ class AlertDBMapper:
             solution=alert_db.solution,
             notification_channel=alert_db.notification_channel,
             alert_type=alert_db.alert_type,
-            is_overridden=alert_db.is_overridden,
-            excluded_namespaces=alert_db.excluded_namespaces,
-            included_namespaces=alert_db.included_namespaces,
         )
 
     def to_domain_list(self, alerts_db: List[AlertDB]) -> List[Alert]:

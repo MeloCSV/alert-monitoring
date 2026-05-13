@@ -12,6 +12,3 @@ class AlertResponse(BaseModel):
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
     alert_type: str = "Ad-hoc"
-    is_overridden: bool = False
-    excluded_namespaces: Optional[str] = None
-    included_namespaces: Optional[str] = None
