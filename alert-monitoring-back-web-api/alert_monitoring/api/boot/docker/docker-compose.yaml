@@ -28,7 +28,7 @@ services:
       -connectRetries=10
       migrate
     volumes:
-      - ../../../driven/postgres_repository/sql:/flyway/sql
+      - ../../driven/postgres_repository/sql:/flyway/sql
     depends_on:
       - db_postgres_alert_monitoring
     networks:
