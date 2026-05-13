@@ -14,9 +14,11 @@ from alert_monitoring.api.driven.prometheus_repository.adapters.prometheus_adapt
 from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
+from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.blackout import Blackout
 
 
 
@@ -34,6 +36,7 @@ class AlertService(AlertServicePort):
         self.prometheus_mapper = PrometheusMapper()
         self.elastic_adapter = ElasticAdapter()
         self.elastic_mapper = ElasticMapper()
+        self.alertmanager_adapter = AlertManagerAdapter()
         self.logger = logger
 
     def sync_prometheus_alerts(self) -> int:
@@ -58,3 +61,7 @@ class AlertService(AlertServicePort):
     def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
         self.logger.info(f'get_alert_overrides solution={solution}')
         return self.override_repository.get_all(solution)
+
+    def get_active_blackouts(self) -> List[Blackout]:
+        self.logger.info('get_active_blackouts')
+        return self.alertmanager_adapter.fetch_active_blackouts()
