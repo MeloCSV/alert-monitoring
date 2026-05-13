@@ -18,6 +18,12 @@ export interface Alert {
   included_namespaces: string | null;
 }
 
+export interface AlertOverride {
+  alert_name: string;
+  microservice: string;
+  is_disabled: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -28,5 +34,12 @@ export class AlertService {
 
   getAlerts(): Observable<Alert[]> {
     return this.http.get<Alert[]>(this.apiUrl);
+  }
+
+  getOverrides(microservice?: string): Observable<AlertOverride[]> {
+    const url = microservice
+      ? `${this.apiUrl}/overrides?microservice=${encodeURIComponent(microservice)}`
+      : `${this.apiUrl}/overrides`;
+    return this.http.get<AlertOverride[]>(url);
   }
 }

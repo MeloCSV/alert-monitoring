@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertService, Alert } from '../../services/alert';
+import { forkJoin } from 'rxjs';
+import { AlertService, Alert, AlertOverride } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
@@ -15,6 +16,7 @@ type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
 })
 export class AlertTableComponent implements OnInit {
   alerts: Alert[] = [];
+  overrides: AlertOverride[] = [];
   loading = true;
   error = false;
 
@@ -31,10 +33,14 @@ export class AlertTableComponent implements OnInit {
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.alertService.getAlerts().subscribe({
-      next: (data) => {
-        this.alerts = data;
-        this.solutionOptions = this.uniqueValues(data.map(a => a.solution));
+    forkJoin({
+      alerts: this.alertService.getAlerts(),
+      overrides: this.alertService.getOverrides(),
+    }).subscribe({
+      next: ({ alerts, overrides }) => {
+        this.alerts = alerts;
+        this.overrides = overrides;
+        this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -74,15 +80,22 @@ export class AlertTableComponent implements OnInit {
       bucket.push(alert);
       byName.set(alert.name, bucket);
     }
+    const disabledForMicro = this.microserviceName ? this.disabledAlertNamesFor(this.microserviceName) : null;
     const result: Alert[] = [];
-    for (const [, bucket] of byName) {
+    for (const [name, bucket] of byName) {
       const representative = bucket[0];
-      const overridden = this.microserviceName
-        ? !bucket.some(a => this.ruleAppliesToMicroservice(a, this.microserviceName))
-        : false;
+      const overridden = disabledForMicro ? disabledForMicro.has(name) : false;
       result.push({ ...representative, is_overridden: overridden });
     }
     return result;
+  }
+
+  private disabledAlertNamesFor(microservice: string): Set<string> {
+    return new Set(
+      this.overrides
+        .filter(o => o.microservice === microservice && o.is_disabled)
+        .map(o => o.alert_name)
+    );
   }
 
   get adhocAlerts(): Alert[] {
@@ -93,24 +106,6 @@ export class AlertTableComponent implements OnInit {
       if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
       return this.passesCommonFilters(alert);
     });
-  }
-
-  private ruleAppliesToMicroservice(alert: Alert, microservice: string): boolean {
-    const hasInclude = !!alert.included_namespaces;
-    const hasExclude = !!alert.excluded_namespaces;
-    if (!hasInclude && !hasExclude) return true;
-    if (hasInclude && !this.matchesPrometheusPattern(microservice, alert.included_namespaces)) return false;
-    if (hasExclude && this.matchesPrometheusPattern(microservice, alert.excluded_namespaces)) return false;
-    return true;
-  }
-
-  private matchesPrometheusPattern(value: string, pattern: string | null): boolean {
-    if (!pattern) return false;
-    try {
-      return new RegExp(`^(?:${pattern})$`).test(value);
-    } catch {
-      return false;
-    }
   }
 
   get hasSolutionSelected(): boolean {
