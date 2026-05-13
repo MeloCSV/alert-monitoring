@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
@@ -8,8 +8,8 @@ from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 
 
-_NAMESPACE_LABEL_KEYS = ("namespace", "backend_target_name", "backend_name")
-_JOB_LABEL_KEYS = ("job_name", "deployment")
+_NAMESPACE_LABEL_KEYS = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
+_JOB_LABEL_KEYS = ("job_name", "deployment", "horizontalpodautoscaler")
 
 
 class RecomputeOverridesUseCase:
@@ -20,22 +20,28 @@ class RecomputeOverridesUseCase:
     def execute(self) -> int:
         alerts = self.alert_repository.get_all()
         default_alerts = [a for a in alerts if a.alert_type == "Por Defecto"]
-        microservices = sorted({
-            a.microservice for a in alerts
-            if a.alert_type == "Ad-hoc" and a.microservice
-        })
 
+        # Build solution → set of microservices from Ad-hoc alerts
+        solution_micros: dict[str, Set[str]] = defaultdict(set)
+        for a in alerts:
+            if a.alert_type == "Ad-hoc" and a.solution and a.solution != "unknown" and a.microservice:
+                solution_micros[a.solution].add(a.microservice)
+
+        solutions = sorted(solution_micros.keys())
+
+        # Group default alerts by name
         buckets: dict[str, List[Alert]] = defaultdict(list)
         for alert in default_alerts:
             buckets[alert.name].append(alert)
 
         overrides: List[AlertOverride] = []
         for name, bucket in buckets.items():
-            for micro in microservices:
-                is_disabled, is_partial = self._evaluate(bucket, micro)
+            for sol in solutions:
+                micros = solution_micros[sol]
+                is_disabled, is_partial = _evaluate(bucket, sol, micros)
                 overrides.append(AlertOverride(
                     alert_name=name,
-                    microservice=micro,
+                    solution=sol,
                     is_disabled=is_disabled,
                     is_partial=is_partial,
                 ))
@@ -43,27 +49,41 @@ class RecomputeOverridesUseCase:
         self.override_repository.replace_all(overrides)
         return len(overrides)
 
-    @classmethod
-    def _evaluate(cls, rules: Iterable[Alert], microservice: str) -> Tuple[bool, bool]:
-        ns_excluded_anywhere = False
-        ns_re_included_anywhere = False
-        job_excluded_anywhere = False
 
-        for rule in rules:
-            ns_excl = _extract_pattern(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=True)
-            ns_incl = _extract_pattern(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=False)
-            job_excl_alts = _extract_alternatives(rule.condition, _JOB_LABEL_KEYS, exclude=True)
+def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[bool, bool]:
+    ns_fully_excluded = False
+    ns_re_included = False
+    partially_excluded = False
 
-            if ns_excl and _regex_matches(microservice, ns_excl):
-                ns_excluded_anywhere = True
-            if ns_incl and _regex_matches(microservice, ns_incl):
-                ns_re_included_anywhere = True
-            if job_excl_alts and _job_excludes_microservice(job_excl_alts, microservice):
-                job_excluded_anywhere = True
+    targets = {solution} | micros
 
-        is_disabled = ns_excluded_anywhere and not ns_re_included_anywhere
-        is_partial = job_excluded_anywhere and not is_disabled
-        return is_disabled, is_partial
+    for rule in rules:
+        ns_excl_alts = _extract_alternatives(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=True)
+        ns_incl_pattern = _extract_pattern(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=False)
+        job_excl_alts = _extract_alternatives(rule.condition, _JOB_LABEL_KEYS, exclude=True)
+
+        for alt in ns_excl_alts:
+            for target in targets:
+                if _regex_matches(target, alt):
+                    ns_fully_excluded = True
+                elif _is_prefix_of(target, alt):
+                    partially_excluded = True
+
+        if ns_incl_pattern:
+            for target in targets:
+                if _regex_matches(target, ns_incl_pattern):
+                    ns_re_included = True
+                    break
+
+        for alt in job_excl_alts:
+            for target in targets:
+                if _is_prefix_of(target, alt):
+                    partially_excluded = True
+                    break
+
+    is_disabled = ns_fully_excluded and not ns_re_included
+    is_partial = partially_excluded and not is_disabled
+    return is_disabled, is_partial
 
 
 def _extract_pattern(expr: Optional[str], keys: Iterable[str], exclude: bool) -> Optional[str]:
@@ -93,30 +113,27 @@ def _regex_matches(value: str, pattern: str) -> bool:
         return False
 
 
-def _job_excludes_microservice(alternatives: List[str], microservice: str) -> bool:
-    if not microservice:
-        return False
-    prefix = f"{microservice}-"
-    for alt in alternatives:
-        literal = _literal_prefix(alt)
-        if not literal:
-            continue
-        if literal == microservice or literal.startswith(prefix):
-            return True
-    return False
-
-
 def _literal_prefix(alternative: str) -> str:
-    literal_chars: list[str] = []
+    """Return the leading literal characters of a regex alternative (stops at first metachar)."""
+    out: list[str] = []
     i = 0
     while i < len(alternative):
         ch = alternative[i]
         if ch == "\\" and i + 1 < len(alternative):
-            literal_chars.append(alternative[i + 1])
+            out.append(alternative[i + 1])
             i += 2
             continue
         if ch in ".*+?()[]{}|^$":
             break
-        literal_chars.append(ch)
+        out.append(ch)
         i += 1
-    return "".join(literal_chars)
+    return "".join(out)
+
+
+def _is_prefix_of(target: str, alternative: str) -> bool:
+    """True when the literal prefix of `alternative` starts with `target-`."""
+    if not target:
+        return False
+    lit = _literal_prefix(alternative)
+    prefix = f"{target}-"
+    return lit.startswith(prefix)

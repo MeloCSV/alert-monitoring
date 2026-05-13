@@ -25,8 +25,8 @@ class AlertOverrideRepositoryAdapter(AlertOverrideRepositoryPort):
             self.sqlalchemy_repository.add(self.mapper.to_db(override))
         self.sqlalchemy_repository.commit()
 
-    def get_all(self, microservice: Optional[str] = None) -> List[AlertOverride]:
+    def get_all(self, solution: Optional[str] = None) -> List[AlertOverride]:
         query = self.sqlalchemy_repository.query(AlertOverrideDB)
-        if microservice:
-            query = query.filter(AlertOverrideDB.microservice == microservice)
+        if solution:
+            query = query.filter(AlertOverrideDB.solution == solution)
         return self.mapper.to_domain_list(query.all())

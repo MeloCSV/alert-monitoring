@@ -80,11 +80,11 @@ export class AlertTableComponent implements OnInit {
       bucket.push(alert);
       byName.set(alert.name, bucket);
     }
-    const overrideStatus = this.microserviceName ? this.overrideStatusFor(this.microserviceName) : null;
+    const overrideStatus = this.overrideStatusFor(this.solutionName);
     const result: Alert[] = [];
     for (const [name, bucket] of byName) {
       const representative = bucket[0];
-      const status = overrideStatus?.get(name);
+      const status = overrideStatus.get(name);
       result.push({
         ...representative,
         is_overridden: status === 'disabled',
@@ -94,10 +94,10 @@ export class AlertTableComponent implements OnInit {
     return result;
   }
 
-  private overrideStatusFor(microservice: string): Map<string, 'disabled' | 'partial'> {
+  private overrideStatusFor(solution: string): Map<string, 'disabled' | 'partial'> {
     const status = new Map<string, 'disabled' | 'partial'>();
     for (const o of this.overrides) {
-      if (o.microservice !== microservice) continue;
+      if (o.solution !== solution) continue;
       if (o.is_disabled) status.set(o.alert_name, 'disabled');
       else if (o.is_partial) status.set(o.alert_name, 'partial');
     }

@@ -55,6 +55,6 @@ class AlertService(AlertServicePort):
         self.logger.info('get_all_alerts')
         return self.get_all_use_case.execute(filters)
 
-    def get_alert_overrides(self, microservice: Optional[str] = None) -> List[AlertOverride]:
-        self.logger.info(f'get_alert_overrides microservice={microservice}')
-        return self.override_repository.get_all(microservice)
+    def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
+        self.logger.info(f'get_alert_overrides solution={solution}')
+        return self.override_repository.get_all(solution)

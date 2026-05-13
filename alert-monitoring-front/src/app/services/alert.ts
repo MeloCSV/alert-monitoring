@@ -19,7 +19,7 @@ export interface Alert {
 
 export interface AlertOverride {
   alert_name: string;
-  microservice: string;
+  solution: string;
   is_disabled: boolean;
   is_partial: boolean;
 }
@@ -36,9 +36,9 @@ export class AlertService {
     return this.http.get<Alert[]>(this.apiUrl);
   }
 
-  getOverrides(microservice?: string): Observable<AlertOverride[]> {
-    const url = microservice
-      ? `${this.apiUrl}/overrides?microservice=${encodeURIComponent(microservice)}`
+  getOverrides(solution?: string): Observable<AlertOverride[]> {
+    const url = solution
+      ? `${this.apiUrl}/overrides?solution=${encodeURIComponent(solution)}`
       : `${this.apiUrl}/overrides`;
     return this.http.get<AlertOverride[]>(url);
   }
