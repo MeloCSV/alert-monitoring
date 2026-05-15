@@ -11,12 +11,14 @@ from alert_monitoring.api.application.use_cases.save_elastic_alerts_use_case imp
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
 from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase
 from alert_monitoring.api.driven.prometheus_repository.adapters.prometheus_adapter import PrometheusAdapter
+from alert_monitoring.api.driven.prometheus_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.blackout import Blackout
 
 
 
@@ -31,6 +33,7 @@ class AlertService(AlertServicePort):
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
         self.recompute_overrides_use_case = RecomputeOverridesUseCase(alert_repository, alert_override_repository)
         self.prometheus_adapter = PrometheusAdapter()
+        self.alertmanager_adapter = AlertManagerAdapter()
         self.prometheus_mapper = PrometheusMapper()
         self.elastic_adapter = ElasticAdapter()
         self.elastic_mapper = ElasticMapper()
@@ -58,3 +61,7 @@ class AlertService(AlertServicePort):
     def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
         self.logger.info(f'get_alert_overrides solution={solution}')
         return self.override_repository.get_all(solution)
+
+    def get_active_blackouts(self) -> List[Blackout]:
+        self.logger.info('get_active_blackouts')
+        return self.alertmanager_adapter.fetch_active_blackouts()

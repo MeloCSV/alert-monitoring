@@ -3,6 +3,7 @@ from typing import List, Optional
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.blackout import Blackout
 
 class AlertServicePort(ABC):
 
@@ -20,4 +21,8 @@ class AlertServicePort(ABC):
 
     @abstractmethod
     def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
+        pass
+
+    @abstractmethod
+    def get_active_blackouts(self) -> List[Blackout]:
         pass

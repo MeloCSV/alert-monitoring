@@ -36,6 +36,7 @@ def load_clusters_from_env() -> List[ClusterConfig]:
                 token=item["token"],
                 ca_cert=item.get("ca_cert"),
                 verify_ssl=item.get("verify_ssl", True),
+                alertmanager_url=item.get("alertmanager_url"),
             ))
         except KeyError as exc:
             logger.error("Cluster mal configurado, falta el campo %s: %s", exc, item.get("name", "?"))

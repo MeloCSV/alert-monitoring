@@ -9,3 +9,4 @@ class ClusterConfig:
     token: str
     ca_cert: Optional[str] = None
     verify_ssl: bool = True
+    alertmanager_url: Optional[str] = None
