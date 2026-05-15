@@ -3,6 +3,7 @@ from typing import List, Optional
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from fwkpy_lib_database.synchronous.datasource import DataSourceManager
+from sqlalchemy import insert
 
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
@@ -21,8 +22,19 @@ class AlertOverrideRepositoryAdapter(AlertOverrideRepositoryPort):
     def replace_all(self, overrides: List[AlertOverride]) -> None:
         self.logger.info(f"Reescribiendo {len(overrides)} overrides de alerta")
         self.sqlalchemy_repository.query(AlertOverrideDB).delete()
-        for override in overrides:
-            self.sqlalchemy_repository.add(self.mapper.to_db(override))
+        if overrides:
+            self.sqlalchemy_repository.execute(
+                insert(AlertOverrideDB),
+                [
+                    {
+                        "alert_name": o.alert_name,
+                        "solution": o.solution,
+                        "is_disabled": o.is_disabled,
+                        "is_partial": o.is_partial,
+                    }
+                    for o in overrides
+                ],
+            )
         self.sqlalchemy_repository.commit()
 
     def get_all(self, solution: Optional[str] = None) -> List[AlertOverride]:
