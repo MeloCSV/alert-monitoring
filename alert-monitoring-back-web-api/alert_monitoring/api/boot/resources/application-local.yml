@@ -7,6 +7,7 @@ fwkpyt:
     database: !ENV "${DB_NAME}"
     username: !ENV "${DB_USER}"
     password: !ENV "${DB_PASSWORD}"
+    sslmode: disable
   logging:
     disable_existing_loggers: False
     formatters:
