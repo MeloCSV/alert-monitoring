@@ -8,7 +8,7 @@ from alert_monitoring.api.driven.alertmanager_repository.models.alertmanager_con
 logger = logging.getLogger(__name__)
 
 SILENCES_PATH = "/api/v2/silences"
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_TIMEOUT = 5.0
 
 
 class AlertManagerHttpClient:
@@ -20,7 +20,7 @@ class AlertManagerHttpClient:
         try:
             response = httpx.get(url, headers=headers, verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT)
             response.raise_for_status()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.TimeoutException) as exc:
             logger.error("Error al consultar silencios en AlertManager %s: %s", config.name, exc)
             return []
 

@@ -37,12 +37,10 @@ export class AlertTableComponent implements OnInit {
     forkJoin({
       alerts: this.alertService.getAlerts(),
       overrides: this.alertService.getOverrides(),
-      blackouts: this.alertService.getBlackouts(),
     }).subscribe({
-      next: ({ alerts, overrides, blackouts }) => {
+      next: ({ alerts, overrides }) => {
         this.alerts = alerts;
         this.overrides = overrides;
-        this.blackouts = blackouts;
         this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
         this.loading = false;
         this.cdr.detectChanges();
@@ -52,6 +50,14 @@ export class AlertTableComponent implements OnInit {
         this.loading = false;
         this.cdr.detectChanges();
       }
+    });
+
+    this.alertService.getBlackouts().subscribe({
+      next: (blackouts) => {
+        this.blackouts = blackouts;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
     });
   }
 
