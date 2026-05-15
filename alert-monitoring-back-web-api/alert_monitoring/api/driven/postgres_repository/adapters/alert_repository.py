@@ -21,9 +21,9 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
 
     def save_all(self, alerts: List[Alert]) -> None:
         self.logger.info(f"Guardando {len(alerts)} alertas")
-        for alert in alerts:
-            alert_db = self.alert_db_mapper.to_db(alert)
-            self.sqlalchemy_repository.add(alert_db)
+        self.sqlalchemy_repository.query(AlertDB).delete()
+        alert_dbs = [self.alert_db_mapper.to_db(alert) for alert in alerts]
+        self.sqlalchemy_repository.bulk_save_objects(alert_dbs)
         self.sqlalchemy_repository.commit()
 
     def get_all(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
