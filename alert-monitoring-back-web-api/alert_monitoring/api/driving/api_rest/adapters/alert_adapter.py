@@ -20,39 +20,40 @@ from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 router = APIRouter()
 
 
-@router.post('/alerts/sync', tags=['alerts'], status_code=201,
-             responses={
-                 500: {'model': str}
-             })
+_ERROR_500 = {500: {'model': str}}
+_ERROR_400_500 = {400: {'model': str}, 500: {'model': str}}
 
-def sync_prometheus_alerts(alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
-                           logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
+
+@router.post('/alerts/sync', tags=['alerts'], status_code=201, responses=_ERROR_500)
+def sync_prometheus_alerts(
+    alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
+    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
+) -> JSONResponse:
     logger.info('sync_prometheus_alerts')
     saved = alert_service.sync_prometheus_alerts()
-    return JSONResponse(status_code=status.HTTP_201_CREATED,
-                        content={"message": "Alertas de Prometheus sincronizadas correctamente",
-                                 "saved": saved})
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={"message": "Alertas de Prometheus sincronizadas correctamente", "saved": saved},
+    )
 
 
-@router.post('/alerts/upload/elastic', tags=['alerts'], status_code=201,
-             responses={
-                 400: {'model': str},
-                 500: {'model': str}
-             })
-def upload_elastic_json(request: ElasticUploadRequest,
-                alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
-                logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
+@router.post('/alerts/upload/elastic', tags=['alerts'], status_code=201, responses=_ERROR_400_500)
+def upload_elastic_json(
+    request: ElasticUploadRequest,
+    alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
+    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
+) -> JSONResponse:
     logger.info('upload_elastic_json')
     alert_service.save_elastic_alerts(request.json_content)
-    return JSONResponse(status_code=status.HTTP_201_CREATED,
-                        content={"message": "Alertas de Elastic guardadas correctamente"})
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={"message": "Alertas de Elastic guardadas correctamente"},
+    )
 
 
-@router.get('/alerts', tags=['alerts'], response_model=List[AlertResponse],
-            responses={
-                500: {'model': str}
-            })
-def get_all_alerts(name: Optional[str] = Query(None, description="Filtra por nombre (coincidencia parcial)"),
+@router.get('/alerts', tags=['alerts'], response_model=List[AlertResponse], responses=_ERROR_500)
+def get_all_alerts(
+    name: Optional[str] = Query(None, description="Filtra por nombre (coincidencia parcial)"),
     source_tool: Optional[str] = Query(None, description="Prometheus o Elastic"),
     severity: Optional[str] = Query(None, description="Warning, Critical o Principal"),
     environments: Optional[List[str]] = Query(None, description="Entornos: dev, itg, pre, pro"),
@@ -61,41 +62,42 @@ def get_all_alerts(name: Optional[str] = Query(None, description="Filtra por nom
     alert_type: Optional[str] = Query(None, description="Por Defecto o Ad-hoc"),
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     api_rest_mapper: AlertDTOMapper = Depends(Injector.instance(AlertDTOMapper)),
-    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))
-    ) -> JSONResponse: 
-        logger.info('get_all_alerts')
-        filters = AlertFilter(
-            name=name,
-            source_tool=source_tool,
-            severity=severity,
-            environments=environments,
-            microservice=microservice,
-            solution=solution,
-            alert_type=alert_type,
-        )
-        alerts = alert_service.get_all_alerts(filters)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(api_rest_mapper.to_models_decorator(alerts)))
+    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
+) -> JSONResponse:
+    logger.info('get_all_alerts')
+    filters = AlertFilter(
+        name=name,
+        source_tool=source_tool,
+        severity=severity,
+        environments=environments,
+        microservice=microservice,
+        solution=solution,
+        alert_type=alert_type,
+    )
+    alerts = alert_service.get_all_alerts(filters)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=jsonable_encoder(api_rest_mapper.to_models_decorator(alerts)),
+    )
 
 
-@router.get('/alerts/overrides', tags=['alerts'], response_model=List[AlertOverrideResponse],
-            responses={
-                500: {'model': str}
-            })
-def get_alert_overrides(solution: Optional[str] = Query(None, description="Filtra los overrides por aplicación"),
-                        alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
-                        logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
+@router.get('/alerts/overrides', tags=['alerts'], response_model=List[AlertOverrideResponse], responses=_ERROR_500)
+def get_alert_overrides(
+    solution: Optional[str] = Query(None, description="Filtra los overrides por aplicación"),
+    alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
+    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
+) -> JSONResponse:
     logger.info('get_alert_overrides')
     overrides = alert_service.get_alert_overrides(solution)
     payload = [AlertOverrideResponse(**o.model_dump()) for o in overrides]
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
 
 
-@router.get('/alerts/blackouts', tags=['alerts'], response_model=List[BlackoutResponse],
-            responses={
-                500: {'model': str}
-            })
-def get_active_blackouts(alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
-                         logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger"))) -> JSONResponse:
+@router.get('/alerts/blackouts', tags=['alerts'], response_model=List[BlackoutResponse], responses=_ERROR_500)
+def get_active_blackouts(
+    alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
+    logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
+) -> JSONResponse:
     logger.info('get_active_blackouts')
     blackouts = alert_service.get_active_blackouts()
     payload = [

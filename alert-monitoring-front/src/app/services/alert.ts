@@ -41,11 +41,9 @@ export interface Blackout {
   comment?: string | null;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AlertService {
-  private apiUrl = 'http://localhost:8080/alerts';
+  private readonly apiUrl = 'http://localhost:8080/alerts';
 
   constructor(private http: HttpClient) {}
 
@@ -53,11 +51,8 @@ export class AlertService {
     return this.http.get<Alert[]>(this.apiUrl);
   }
 
-  getOverrides(solution?: string): Observable<AlertOverride[]> {
-    const url = solution
-      ? `${this.apiUrl}/overrides?solution=${encodeURIComponent(solution)}`
-      : `${this.apiUrl}/overrides`;
-    return this.http.get<AlertOverride[]>(url);
+  getOverrides(): Observable<AlertOverride[]> {
+    return this.http.get<AlertOverride[]>(`${this.apiUrl}/overrides`);
   }
 
   getBlackouts(): Observable<Blackout[]> {
