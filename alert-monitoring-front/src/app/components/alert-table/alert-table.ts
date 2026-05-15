@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AlertService, Alert, AlertOverride, Blackout } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
@@ -35,9 +36,9 @@ export class AlertTableComponent implements OnInit {
 
   ngOnInit(): void {
     forkJoin({
-      alerts: this.alertService.getAlerts(),
-      overrides: this.alertService.getOverrides(),
-      blackouts: this.alertService.getBlackouts(),
+      alerts: this.alertService.getAlerts().pipe(catchError(() => of<Alert[]>([]))),
+      overrides: this.alertService.getOverrides().pipe(catchError(() => of<AlertOverride[]>([]))),
+      blackouts: this.alertService.getBlackouts().pipe(catchError(() => of<Blackout[]>([]))),
     }).subscribe({
       next: ({ alerts, overrides, blackouts }) => {
         this.alerts = alerts;

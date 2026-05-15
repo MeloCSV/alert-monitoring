@@ -20,7 +20,13 @@ class AlertManagerHttpClient:
         if config.token:
             headers["Authorization"] = f"Bearer {config.token}"
         try:
-            response = httpx.get(url, headers=headers, verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT)
+            response = httpx.get(
+                url,
+                headers=headers,
+                verify=config.verify_ssl,
+                timeout=DEFAULT_TIMEOUT,
+                follow_redirects=True,
+            )
             response.raise_for_status()
         except httpx.HTTPError as exc:
             logger.error("Error al consultar silencios en AlertManager %s: %s", config.name, exc)
