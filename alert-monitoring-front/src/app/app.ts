@@ -5,7 +5,6 @@ import { AlertTableComponent } from './components/alert-table/alert-table';
   selector: 'app-root',
   standalone: true,
   imports: [AlertTableComponent],
-  templateUrl: './app.html',
-  styleUrl: './app.scss'
+  templateUrl: './app.html'
 })
 export class App {}

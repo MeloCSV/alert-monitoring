@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from typing import List, Optional
-from typing import List
+
 from alert_monitoring.api.driven.elastic_repository.models.elastic_model import ElasticRule
 
 logger = logging.getLogger(__name__)

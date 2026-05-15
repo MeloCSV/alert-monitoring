@@ -1,10 +1,23 @@
 import re
-import logging
-from typing import List, Optional, Tuple
-from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
-from alert_monitoring.api.domain.models.alert import Alert
+from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
+
+
+_CANAL_DISPLAY_NAMES = {
+    "msteams": "Teams",
+    "omi": "ServiceNow",
+    "jira": "Jira",
+}
+
+_BOOL_CHANNEL_LABELS = (
+    ("msteams", "Teams"),
+    ("omi", "ServiceNow"),
+    ("jira", "Jira"),
+    ("mail", "Mail"),
+)
+
 
 class PrometheusMapper:
     def to_domain(self, rules: List[PrometheusRule]) -> List[Alert]:
@@ -12,102 +25,63 @@ class PrometheusMapper:
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
-        annotations = rule.annotations
-
-        description = annotations.get("message", "Sin descripción")
-        severity = labels.get("severity", "unknown")
-        solution = labels.get("solucion", "unknown")
-        channel = self._infer_channel(labels)
-
-        microservice = self._infer_microservice(rule)
-        env_list, _ = self._infer_environments(rule)
-
         is_default = str(labels.get("alertype", "")).lower() == "default"
-        alert_type = "Por Defecto" if is_default else "Ad-hoc"
 
         return Alert(
             name=rule.alert,
-            description=description,
+            description=rule.annotations.get("message", "Sin descripción"),
             source_tool="Prometheus",
-            severity=severity,
+            severity=labels.get("severity", "unknown"),
             condition=rule.expr,
-            environments=env_list,
-            microservice=microservice,
-            solution=solution,
-            notification_channel=channel,
-            alert_type=alert_type,
+            environments=self._infer_environments(rule),
+            microservice=self._infer_microservice(rule),
+            solution=labels.get("solucion", "unknown"),
+            notification_channel=self._infer_channel(labels),
+            alert_type="Por Defecto" if is_default else "Ad-hoc",
         )
-
-    _CANAL_DISPLAY_NAMES = {
-        "msteams": "Teams",
-        "omi": "ServiceNow",
-        "jira": "Jira",
-    }
 
     def _infer_channel(self, labels: dict) -> Optional[str]:
         canal = labels.get("canal")
         if canal:
-            return self._CANAL_DISPLAY_NAMES.get(canal.lower(), canal)
-        if labels.get("msteams") == "true":
-            return "Teams"
-        if labels.get("omi") == "true":
-            return "ServiceNow"
-        if labels.get("jira") == "true":
-            return "Jira"
-        if labels.get("mail") == "true":
-            return "Mail"
+            return _CANAL_DISPLAY_NAMES.get(canal.lower(), canal)
+        for label, display in _BOOL_CHANNEL_LABELS:
+            if labels.get(label) == "true":
+                return display
         return None
 
     def _infer_microservice(self, rule: PrometheusRule) -> Optional[str]:
         labels = rule.labels
-        expr = rule.expr
+        for key in ("service", "namespace", "job"):
+            if labels.get(key):
+                return labels[key]
 
-        if labels.get("service"):
-            return labels["service"]
-        if labels.get("namespace"):
-            return labels["namespace"]
-        if labels.get("job"):
-            return labels["job"]
-
-        if expr:
-            job_match = re.search(r'job=(?:~)?["\']([^"\']+)["\']', expr)
-            ns_match = re.search(r'namespace=(?:~)?["\']([^"\']+)["\']', expr)
-            project_id_match = re.search(r'project_id=(?:~)?["\']([^"\']+)["\']', expr)
-
-            if job_match:
-                return self._clean(job_match.group(1))
-            if ns_match:
-                return self._clean(ns_match.group(1))
-            if project_id_match:
-                return self._clean(project_id_match.group(1))
+        if rule.expr:
+            for key in ("job", "namespace", "project_id"):
+                match = re.search(rf'{key}=(?:~)?["\']([^"\']+)["\']', rule.expr)
+                if match:
+                    return self._clean(match.group(1))
 
         if rule.group_name:
             return rule.group_name.replace(".rules", "")
-
         return None
 
-    def _infer_environments(self, rule: PrometheusRule) -> Tuple[list, Optional[str]]:
+    def _infer_environments(self, rule: PrometheusRule) -> List[str]:
         labels = rule.labels
-        expr = rule.expr
 
-        label_envs = []
-        for key in ["environment", "env"]:
-            val = labels.get(key, "").lower()
-            if val and "{{" not in val:
-                label_envs.append(val)
+        label_envs = [
+            val for val in (labels.get(key, "").lower() for key in ("environment", "env"))
+            if val and "{{" not in val
+        ]
         if label_envs:
-            return label_envs, "label"
+            return label_envs
 
-        expr_envs = set()
-        for match in re.findall(r'environment(?:=~|=)["\']([^"\']+)["\']', expr):
-            for part in re.split(r'\|', match):
+        expr_envs: set[str] = set()
+        for match in re.findall(r'environment(?:=~|=)["\']([^"\']+)["\']', rule.expr):
+            for part in match.split("|"):
                 clean = self._clean(part)
                 if clean:
                     expr_envs.add(clean)
-        if expr_envs:
-            return list(expr_envs), "expr"
-
-        return [], None
+        return list(expr_envs)
 
     def _clean(self, value: str) -> str:
         return value.replace(".*", "").replace(".+", "").replace("^", "").replace("$", "").strip()

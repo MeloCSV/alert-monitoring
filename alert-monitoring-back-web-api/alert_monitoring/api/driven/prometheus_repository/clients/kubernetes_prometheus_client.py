@@ -25,7 +25,7 @@ class KubernetesPrometheusClient:
 
         rules: List[PrometheusRule] = []
         for item in response.get("items", []):
-            rules.extend(self._parse_item(item, cluster.name))
+            rules.extend(self._parse_item(item))
         return rules
 
     def _build_api(self, cluster: ClusterConfig) -> client.CustomObjectsApi:
@@ -39,7 +39,7 @@ class KubernetesPrometheusClient:
             configuration.verify_ssl = cluster.verify_ssl
         return client.CustomObjectsApi(client.ApiClient(configuration))
 
-    def _parse_item(self, item: dict, cluster_name: str) -> List[PrometheusRule]:
+    def _parse_item(self, item: dict) -> List[PrometheusRule]:
         spec = item.get("spec", {}) or {}
         rules: List[PrometheusRule] = []
         for group in spec.get("groups", []) or []:
@@ -53,6 +53,5 @@ class KubernetesPrometheusClient:
                     labels=rule.get("labels", {}) or {},
                     annotations=rule.get("annotations", {}) or {},
                     group_name=group_name,
-                    cluster=cluster_name,
                 ))
         return rules

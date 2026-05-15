@@ -8,9 +8,6 @@ class Alert(BaseModel):
     severity: str = Field(..., description="Nivel de severidad (Critical, Warning, etc.)")
     condition: str = Field(..., description="La consulta o condición que dispara la alerta")
     environments: Optional[List[str]] = Field(default_factory=list, description="Entornos: LAB, PRE, PRO")
-
-    origin_link: Optional[str] = Field(None, description="Enlace directo a la definición")
-
     microservice: Optional[str] = Field(None, description="Microservicio al que pertenece")
     solution: Optional[str] = Field(None, description="PI frabricado")
     notification_channel: Optional[str] = Field(None, description="Canal o destino de notificación")

@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from typing import Optional
+
 
 @dataclass
 class ElasticRule:
