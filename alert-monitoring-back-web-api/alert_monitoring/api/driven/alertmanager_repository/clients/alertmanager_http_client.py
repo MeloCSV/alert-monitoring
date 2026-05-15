@@ -15,6 +15,8 @@ class AlertManagerHttpClient:
     def fetch_silences(self, config: AlertManagerConfig) -> List[dict]:
         url = config.url.rstrip("/") + SILENCES_PATH
         headers = {}
+        if config.host_header:
+            headers["Host"] = config.host_header
         if config.token:
             headers["Authorization"] = f"Bearer {config.token}"
         try:
