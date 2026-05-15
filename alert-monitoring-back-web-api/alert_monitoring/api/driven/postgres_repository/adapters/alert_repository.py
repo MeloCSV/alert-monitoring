@@ -3,6 +3,7 @@ from typing import List,Optional
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from fwkpy_lib_database.synchronous.datasource import DataSourceManager
+from sqlalchemy import insert, text
 
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
@@ -21,9 +22,26 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
 
     def save_all(self, alerts: List[Alert]) -> None:
         self.logger.info(f"Guardando {len(alerts)} alertas")
-        self.sqlalchemy_repository.query(AlertDB).delete()
-        alert_dbs = [self.alert_db_mapper.to_db(alert) for alert in alerts]
-        self.sqlalchemy_repository.bulk_save_objects(alert_dbs)
+        self.sqlalchemy_repository.execute(text("TRUNCATE TABLE alerts RESTART IDENTITY"))
+        if alerts:
+            self.sqlalchemy_repository.execute(
+                insert(AlertDB),
+                [
+                    {
+                        "name": a.name,
+                        "description": a.description,
+                        "source_tool": a.source_tool,
+                        "severity": a.severity,
+                        "condition": a.condition,
+                        "environments": a.environments,
+                        "microservice": a.microservice,
+                        "solution": a.solution,
+                        "notification_channel": a.notification_channel,
+                        "alert_type": a.alert_type,
+                    }
+                    for a in alerts
+                ],
+            )
         self.sqlalchemy_repository.commit()
 
     def get_all(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
