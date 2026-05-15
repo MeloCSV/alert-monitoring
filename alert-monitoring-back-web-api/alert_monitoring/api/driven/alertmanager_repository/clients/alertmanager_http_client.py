@@ -19,8 +19,11 @@ class AlertManagerHttpClient:
             headers["Host"] = config.host_header
         if config.token:
             headers["Authorization"] = f"Bearer {config.token}"
+        extensions = {"sni_hostname": config.host_header} if config.host_header else None
         try:
-            response = httpx.get(url, headers=headers, verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT)
+            request = httpx.Request("GET", url, headers=headers, extensions=extensions)
+            with httpx.Client(verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT) as client:
+                response = client.send(request)
             response.raise_for_status()
         except httpx.HTTPError as exc:
             logger.error("Error al consultar silencios en AlertManager %s: %s", config.name, exc)
