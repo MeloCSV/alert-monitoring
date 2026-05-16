@@ -119,7 +119,7 @@
                             <span class="partial-tag">Alarmado parcialmente</span>
                           }
                           @if (alert.is_blackout) {
-                            <span class="blackout-tag">Silenciada</span>
+                            <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
@@ -163,7 +163,7 @@
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
                           @if (alert.is_blackout) {
-                            <span class="blackout-tag">Silenciada</span>
+                            <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
