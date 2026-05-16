@@ -70,6 +70,7 @@ export class AlertTableComponent implements OnInit {
   }
 
   private isAlertBlackedOut(alert: Alert): boolean {
+    const KNOWN_LABELS = new Set(['alertname', 'severity', 'environment', 'environments']);
     for (const blackout of this.blackouts) {
       const nameMatchers = blackout.matchers.filter(m => m.name === 'alertname');
       if (nameMatchers.length === 0) continue;
@@ -81,7 +82,16 @@ export class AlertTableComponent implements OnInit {
       const severityOk = severityMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.severity || '').toLowerCase())
       );
-      if (severityOk) return true;
+      if (!severityOk) continue;
+      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
+      const envOk = envMatchers.every(m =>
+        alert.environments.some(e => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, e.toLowerCase()))
+      );
+      if (!envOk) continue;
+      // If any matcher uses a label we can't evaluate, skip this silence
+      const hasUnknownMatcher = blackout.matchers.some(m => !KNOWN_LABELS.has(m.name));
+      if (hasUnknownMatcher) continue;
+      return true;
     }
     return false;
   }
