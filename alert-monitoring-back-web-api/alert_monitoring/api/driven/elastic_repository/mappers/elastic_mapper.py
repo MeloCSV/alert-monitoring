@@ -27,7 +27,7 @@ class ElasticMapper:
             condition=rule.condition,
             environments=environments_or_all(rule.environments),
             microservice=self._infer_microservice(rule),
-            solution=None,
+            solution=labels.get("application"),
             notification_channel=self._infer_channel(rule),
         )
 
