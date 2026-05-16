@@ -9,3 +9,4 @@ class AlertManagerConfig(BaseModel):
     token: Optional[str] = None
     verify_ssl: bool = True
     host_header: Optional[str] = None
+    sni_hostname: Optional[str] = None
