@@ -70,42 +70,31 @@ export class AlertTableComponent implements OnInit {
   }
 
   private findBlackoutForAlert(alert: Alert): Blackout | null {
+    // Label → valor del alert que podemos evaluar
+    const labelGetters: Record<string, () => string | string[]> = {
+      alertname:    () => alert.name,
+      severity:     () => (alert.severity || '').toLowerCase(),
+      environment:  () => alert.environments.map(e => e.toLowerCase()),
+      environments: () => alert.environments.map(e => e.toLowerCase()),
+      solucion:     () => (alert.solution || '').toLowerCase(),
+      solution:     () => (alert.solution || '').toLowerCase(),
+      namespace:    () => (alert.microservice || '').toLowerCase(),
+    };
+
     for (const blackout of this.blackouts) {
-      const nameMatchers = blackout.matchers.filter(m => m.name === 'alertname');
-      if (nameMatchers.length === 0) continue;
+      const evaluatable = blackout.matchers.filter(m => m.name in labelGetters);
+      // Si no hay ningún matcher que podamos evaluar, ignoramos el silencio
+      if (evaluatable.length === 0) continue;
 
-      const nameOk = nameMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, alert.name)
-      );
-      if (!nameOk) continue;
+      const allMatch = evaluatable.every(m => {
+        const val = labelGetters[m.name]();
+        if (Array.isArray(val)) {
+          return val.some(v => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, v));
+        }
+        return this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, val);
+      });
 
-      const severityMatchers = blackout.matchers.filter(m => m.name === 'severity');
-      const severityOk = severityMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.severity || '').toLowerCase())
-      );
-      if (!severityOk) continue;
-
-      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
-      const envOk = envMatchers.every(m =>
-        alert.environments.some(e => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, e.toLowerCase()))
-      );
-      if (!envOk) continue;
-
-      // solucion/solution → alert.solution
-      const solutionMatchers = blackout.matchers.filter(m => m.name === 'solucion' || m.name === 'solution');
-      const solutionOk = solutionMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.solution || '').toLowerCase())
-      );
-      if (!solutionOk) continue;
-
-      // namespace → alert.microservice (aproximación)
-      const nsMatchers = blackout.matchers.filter(m => m.name === 'namespace');
-      const nsOk = nsMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.microservice || '').toLowerCase())
-      );
-      if (!nsOk) continue;
-
-      return blackout;
+      if (allMatch) return blackout;
     }
     return null;
   }
