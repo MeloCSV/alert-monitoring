@@ -35,6 +35,7 @@ def load_alertmanagers_from_env() -> List[AlertManagerConfig]:
                 token=item.get("token"),
                 verify_ssl=item.get("verify_ssl", True),
                 host_header=item.get("host_header"),
+                sni_hostname=item.get("sni_hostname"),
             ))
         except KeyError as exc:
             logger.error("AlertManager mal configurado, falta el campo %s: %s", exc, item.get("name", "?"))

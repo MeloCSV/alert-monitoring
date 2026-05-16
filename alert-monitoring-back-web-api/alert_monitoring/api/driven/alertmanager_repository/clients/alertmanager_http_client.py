@@ -19,7 +19,7 @@ class AlertManagerHttpClient:
             headers["Host"] = config.host_header
         if config.token:
             headers["Authorization"] = f"Bearer {config.token}"
-        extensions = {"sni_hostname": config.host_header} if config.host_header else None
+        extensions = {"sni_hostname": config.sni_hostname} if config.sni_hostname else None
         try:
             request = httpx.Request("GET", url, headers=headers, extensions=extensions)
             with httpx.Client(verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT) as client:
