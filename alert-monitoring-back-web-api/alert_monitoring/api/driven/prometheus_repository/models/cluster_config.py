@@ -7,5 +7,6 @@ class ClusterConfig:
     name: str
     host: str
     token: str
+    namespace: str = "prometheus"
     ca_cert: Optional[str] = None
     verify_ssl: bool = True
