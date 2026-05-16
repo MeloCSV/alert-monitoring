@@ -12,6 +12,7 @@ from alert_monitoring.api.application.use_cases.save_alerts_use_case import Save
 from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
+from alert_monitoring.api.driven.kibana_repository.adapters.kibana_adapter import KibanaAdapter
 from alert_monitoring.api.driven.prometheus_repository.adapters.prometheus_adapter import PrometheusAdapter
 from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper
 from alert_monitoring.api.domain.models.alert import Alert
@@ -33,6 +34,7 @@ class AlertService(AlertServicePort):
         self.prometheus_mapper = PrometheusMapper()
         self.elastic_adapter = ElasticAdapter()
         self.elastic_mapper = ElasticMapper()
+        self.kibana_adapter = KibanaAdapter()
         self.alertmanager_adapter = AlertManagerAdapter()
         self.logger = logger
 
@@ -44,12 +46,14 @@ class AlertService(AlertServicePort):
         self.recompute_overrides_use_case.execute()
         return len(alerts)
 
-    def save_elastic_alerts(self, json_content: str) -> None:
-        self.logger.info('save_elastic_alerts')
-        rules = self.elastic_adapter.load_rules(json_content)
+    def sync_elastic_alerts(self) -> int:
+        self.logger.info('sync_elastic_alerts')
+        raw_rules = self.kibana_adapter.fetch_rules()
+        rules = self.elastic_adapter.parse_rules(raw_rules)
         alerts = self.elastic_mapper.to_domain(rules)
         self.save_use_case.execute(alerts)
         self.recompute_overrides_use_case.execute()
+        return len(alerts)
 
     def get_all_alerts(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
         self.logger.info('get_all_alerts')
