@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -9,10 +9,8 @@ class ElasticRule:
     enabled: bool
     schedule_interval: str
     condition: str
-    canal: Optional[str] = None
-    severity: Optional[str] = None
-    namespace: Optional[str] = None
-    description: Optional[str] = None
-    microservice: Optional[str] = None
-    environment: Optional[str] = None
     rule_type: Optional[str] = None
+    canals: List[str] = field(default_factory=list)
+    labels: Dict[str, str] = field(default_factory=dict)
+    description: Optional[str] = None
+    environments: List[str] = field(default_factory=list)
