@@ -12,7 +12,7 @@ class AlertServicePort(ABC):
         pass
 
     @abstractmethod
-    def save_elastic_alerts(self, json_content: str) -> None:
+    def sync_elastic_alerts(self) -> int:
         pass
 
     @abstractmethod

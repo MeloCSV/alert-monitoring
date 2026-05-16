@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 from typing import Dict, List, Optional, Tuple
@@ -16,19 +15,9 @@ _WHITESPACE = re.compile(r"\s+")
 
 class ElasticAdapter:
 
-    def load_rules(self, json_content: str) -> List[ElasticRule]:
-        try:
-            data = json.loads(json_content)
-        except json.JSONDecodeError as exc:
-            logger.error(f"Error al parsear el JSON de Elastic: {exc}")
-            return []
-
-        if not isinstance(data, dict) or "data" not in data:
-            logger.warning("El contenido JSON no tiene la estructura esperada.")
-            return []
-
-        rules = []
-        for item in data.get("data", []):
+    def parse_rules(self, items: List[dict]) -> List[ElasticRule]:
+        rules: List[ElasticRule] = []
+        for item in items:
             try:
                 rule = self._parse_rule(item)
                 if rule:
@@ -36,7 +25,6 @@ class ElasticAdapter:
             except Exception as exc:
                 logger.warning(f"Error procesando regla '{item.get('name', 'unknown')}': {exc}")
                 continue
-
         return rules
 
     def _parse_rule(self, item: dict) -> ElasticRule:

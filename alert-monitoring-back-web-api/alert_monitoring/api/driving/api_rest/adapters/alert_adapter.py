@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse
 from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
-from alert_monitoring.api.driving.api_rest.models.alert_request import ElasticUploadRequest
 from alert_monitoring.api.driving.api_rest.models.alert_response import AlertResponse
 from alert_monitoring.api.driving.api_rest.models.alert_override_response import AlertOverrideResponse
 from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse, BlackoutMatcherResponse
@@ -21,7 +20,6 @@ router = APIRouter()
 
 
 _ERROR_500 = {500: {'model': str}}
-_ERROR_400_500 = {400: {'model': str}, 500: {'model': str}}
 
 
 @router.post('/alerts/sync', tags=['alerts'], status_code=201, responses=_ERROR_500)
@@ -37,17 +35,16 @@ def sync_prometheus_alerts(
     )
 
 
-@router.post('/alerts/upload/elastic', tags=['alerts'], status_code=201, responses=_ERROR_400_500)
-def upload_elastic_json(
-    request: ElasticUploadRequest,
+@router.post('/alerts/sync/elastic', tags=['alerts'], status_code=201, responses=_ERROR_500)
+def sync_elastic_alerts(
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
-    logger.info('upload_elastic_json')
-    alert_service.save_elastic_alerts(request.json_content)
+    logger.info('sync_elastic_alerts')
+    saved = alert_service.sync_elastic_alerts()
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content={"message": "Alertas de Elastic guardadas correctamente"},
+        content={"message": "Alertas de Elastic sincronizadas correctamente", "saved": saved},
     )
 
 
