@@ -1,2 +1,3 @@
-Set-Location alert-monitoring-front
-ng serve
+Set-Location "$PSScriptRoot\alert-monitoring-front"
+npm install
+npx ng serve
