@@ -3,19 +3,10 @@ from typing import List, Optional
 
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
-
-
-_CANAL_DISPLAY_NAMES = {
-    "msteams": "Teams",
-    "omi": "ServiceNow",
-    "jira": "Jira",
-}
-
-_BOOL_CHANNEL_LABELS = (
-    ("msteams", "Teams"),
-    ("omi", "ServiceNow"),
-    ("jira", "Jira"),
-    ("mail", "Mail"),
+from alert_monitoring.api.driven.shared.alert_normalization import (
+    BOOL_CHANNEL_LABELS,
+    display_canal,
+    environments_or_all,
 )
 
 
@@ -33,7 +24,7 @@ class PrometheusMapper:
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
             condition=rule.expr,
-            environments=self._infer_environments(rule),
+            environments=environments_or_all(self._infer_environments(rule)),
             microservice=self._infer_microservice(rule),
             solution=labels.get("solucion", "unknown"),
             notification_channel=self._infer_channel(labels),
@@ -43,8 +34,8 @@ class PrometheusMapper:
     def _infer_channel(self, labels: dict) -> Optional[str]:
         canal = labels.get("canal")
         if canal:
-            return _CANAL_DISPLAY_NAMES.get(canal.lower(), canal)
-        for label, display in _BOOL_CHANNEL_LABELS:
+            return display_canal(canal)
+        for label, display in BOOL_CHANNEL_LABELS:
             if labels.get(label) == "true":
                 return display
         return None

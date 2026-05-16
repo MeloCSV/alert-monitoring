@@ -1,11 +1,18 @@
 import json
 import logging
 import re
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from alert_monitoring.api.driven.elastic_repository.models.elastic_model import ElasticRule
+from alert_monitoring.api.driven.shared.alert_normalization import detect_environments
 
 logger = logging.getLogger(__name__)
+
+_TEMPLATE_FULL = re.compile(r"^\s*\{\{[^{}]+\}\}\s*$")
+_TEMPLATE_INLINE = re.compile(r"\{\{[^}]+\}\}")
+_HTML_TAG = re.compile(r"<[^>]+>")
+_WHITESPACE = re.compile(r"\s+")
+
 
 class ElasticAdapter:
 
@@ -33,75 +40,119 @@ class ElasticAdapter:
         return rules
 
     def _parse_rule(self, item: dict) -> ElasticRule:
-        name = item.get("name", "")
-        enabled = item.get("enabled", False)
-        rule_type = item.get("rule_type_id", "")
-        schedule_interval = item.get("schedule", {}).get("interval", "")
-        condition = self._extract_condition(item.get("params", {}))
-
-        document = self._extract_document(item)
-
-        canal, severity, namespace, description, microservice, environment = self._extract_from_document(document)
+        params = item.get("params", {})
+        condition = self._extract_condition(params)
+        labels, canals, description = self._collect_from_actions(item.get("actions", []))
+        environments = self._extract_environments(labels, condition, params)
 
         return ElasticRule(
             id=item.get("id", ""),
-            name=name,
-            enabled=enabled,
-            schedule_interval=schedule_interval,
+            name=item.get("name", ""),
+            enabled=item.get("enabled", False),
+            schedule_interval=item.get("schedule", {}).get("interval", ""),
             condition=condition,
-            canal=canal,
-            severity=severity,
-            namespace=namespace,
+            rule_type=item.get("rule_type_id", ""),
+            canals=canals,
+            labels=labels,
             description=description,
-            microservice=microservice,
-            environment=environment,
-            rule_type=rule_type
+            environments=environments,
         )
 
-    def _extract_document(self, item: dict) -> dict:
-        try:
-            return item["actions"][0]["params"]["documents"][0]
-        except (IndexError, KeyError):
-            return {}
+    def _collect_from_actions(self, actions: List[dict]) -> Tuple[Dict[str, str], List[str], Optional[str]]:
+        labels: Dict[str, str] = {}
+        canals: List[str] = []
+        description: Optional[str] = None
+
+        for action in actions:
+            params = action.get("params") or {}
+
+            for doc in params.get("documents") or []:
+                self._merge_document(doc, labels, canals)
+                description = description or self._extract_description(doc)
+
+            if not params.get("documents"):
+                description = description or self._clean_template(params.get("message"))
+                if params.get("level"):
+                    labels.setdefault("severity", str(params["level"]))
+
+        return labels, canals, description
+
+    def _merge_document(self, doc: dict, labels: Dict[str, str], canals: List[str]) -> None:
+        canal = self._clean_template(doc.get("canal"))
+        if canal and canal not in canals:
+            canals.append(canal)
+
+        alert_manager_body = doc.get("alertManagerBody")
+        if isinstance(alert_manager_body, dict):
+            for key, value in (alert_manager_body.get("labels") or {}).items():
+                cleaned = self._clean_template(value)
+                if cleaned and key not in labels:
+                    labels[key] = cleaned
+            return
+
+        flat_label_keys = (
+            "severity", "namespace", "pod", "cluster", "cloud",
+            "instance", "job", "level", "alertname", "deployment",
+            "application", "environment",
+        )
+        for key in flat_label_keys:
+            if key in doc and key not in labels:
+                cleaned = self._clean_template(doc.get(key))
+                if cleaned:
+                    labels[key] = cleaned
+
+    def _extract_description(self, doc: dict) -> Optional[str]:
+        alert_manager_body = doc.get("alertManagerBody")
+        if isinstance(alert_manager_body, dict):
+            annotations = alert_manager_body.get("annotations") or {}
+            cleaned = self._clean_template(annotations.get("message"))
+            if cleaned:
+                return cleaned
+
+        for key in ("message_info", "message", "context_message"):
+            cleaned = self._clean_template(doc.get(key))
+            if cleaned:
+                return cleaned
+        return None
 
     def _extract_condition(self, params: dict) -> str:
-        if "searchConfiguration" in params:
-            return params["searchConfiguration"].get("query", {}).get("query", "")
+        search_config = params.get("searchConfiguration")
+        if isinstance(search_config, dict):
+            return search_config.get("query", {}).get("query", "") or ""
         if "esQuery" in params:
-            return params["esQuery"]
-        if "esqlQuery" in params:
-            return params["esqlQuery"].get("esql", "")
+            return params.get("esQuery") or ""
+        esql = params.get("esqlQuery")
+        if isinstance(esql, dict):
+            return esql.get("esql", "") or ""
         return ""
 
-    def _extract_from_document(self, doc: dict):
-        if "alertManagerBody" in doc:
-            labels = doc["alertManagerBody"].get("labels", {})
-            annotations = doc["alertManagerBody"].get("annotations", {})
-            canal = doc.get("canal")
-            severity = labels.get("severity")
-            namespace = labels.get("namespace")
-            description = self._clean_template(annotations.get("message"))
-            microservice = self._clean_template(labels.get("application") or labels.get("job"))
-            environment = labels.get("environment")
-            return canal, severity, namespace, description, microservice, environment
+    def _extract_environments(self, labels: Dict[str, str], condition: str, params: dict) -> List[str]:
+        sources: List[Optional[str]] = [labels.get("environment"), condition]
 
-        canal = doc.get("canal")
-        severity = doc.get("severity")
-        namespace = doc.get("namespace")
-        description = self._clean_template(doc.get("message_info"))
-        microservice = self._clean_template(doc.get("pod") or doc.get("namespace"))
-        environment = doc.get("environment")
-        return canal, severity, namespace, description, microservice, environment
-        
+        search_config = params.get("searchConfiguration") or {}
+        index = search_config.get("index")
+        if isinstance(index, dict):
+            sources.append(index.get("title"))
+        elif isinstance(index, str):
+            sources.append(index)
 
-    def _clean_template(self, value: str) -> Optional[str]:
-        if not value:
+        param_index = params.get("index")
+        if isinstance(param_index, list):
+            sources.extend(str(i) for i in param_index)
+        elif isinstance(param_index, str):
+            sources.append(param_index)
+
+        return detect_environments(sources)
+
+    def _clean_template(self, value) -> Optional[str]:
+        if value is None:
             return None
-        # Si el valor es puro template devuelve None
-        if re.match(r'^\{\{.*\}\}$', value.strip()):
+        text = str(value).strip()
+        if not text:
             return None
-        # Limpia HTML
-        value = re.sub(r'<[^>]+>', '', value)
-        # Limpia templates mustache
-        value = re.sub(r'\{\{[^}]+\}\}', '', value).strip()
-        return value if value else None
+        if _TEMPLATE_FULL.match(text):
+            return None
+        text = _HTML_TAG.sub(" ", text)
+        text = _TEMPLATE_INLINE.sub(" ", text)
+        text = _WHITESPACE.sub(" ", text).strip()
+        return text or None
