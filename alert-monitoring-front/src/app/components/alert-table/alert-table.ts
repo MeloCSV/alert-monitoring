@@ -73,20 +73,38 @@ export class AlertTableComponent implements OnInit {
     for (const blackout of this.blackouts) {
       const nameMatchers = blackout.matchers.filter(m => m.name === 'alertname');
       if (nameMatchers.length === 0) continue;
+
       const nameOk = nameMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, alert.name)
       );
       if (!nameOk) continue;
+
       const severityMatchers = blackout.matchers.filter(m => m.name === 'severity');
       const severityOk = severityMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.severity || '').toLowerCase())
       );
       if (!severityOk) continue;
+
       const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
       const envOk = envMatchers.every(m =>
         alert.environments.some(e => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, e.toLowerCase()))
       );
       if (!envOk) continue;
+
+      // solucion/solution → alert.solution
+      const solutionMatchers = blackout.matchers.filter(m => m.name === 'solucion' || m.name === 'solution');
+      const solutionOk = solutionMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.solution || '').toLowerCase())
+      );
+      if (!solutionOk) continue;
+
+      // namespace → alert.microservice (aproximación)
+      const nsMatchers = blackout.matchers.filter(m => m.name === 'namespace');
+      const nsOk = nsMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.microservice || '').toLowerCase())
+      );
+      if (!nsOk) continue;
+
       return blackout;
     }
     return null;
