@@ -34,6 +34,7 @@ def load_clusters_from_env() -> List[ClusterConfig]:
                 name=item["name"],
                 host=item["host"],
                 token=item["token"],
+                namespace=item.get("namespace", "prometheus"),
                 ca_cert=item.get("ca_cert"),
                 verify_ssl=item.get("verify_ssl", True),
             ))

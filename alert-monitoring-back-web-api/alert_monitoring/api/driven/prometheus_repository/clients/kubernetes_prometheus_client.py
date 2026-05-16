@@ -18,7 +18,7 @@ class KubernetesPrometheusClient:
     def fetch_rules(self, cluster: ClusterConfig) -> List[PrometheusRule]:
         api = self._build_api(cluster)
         try:
-            response = api.list_cluster_custom_object(group=GROUP, version=VERSION, plural=PLURAL)
+            response = api.list_namespaced_custom_object(group=GROUP, version=VERSION, plural=PLURAL, namespace=cluster.namespace)
         except client.ApiException as exc:
             logger.error("Error al consultar PrometheusRules en %s: %s", cluster.name, exc)
             return []
