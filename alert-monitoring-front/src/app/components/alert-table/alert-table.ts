@@ -69,7 +69,7 @@ export class AlertTableComponent implements OnInit {
     return isEqual ? hit : !hit;
   }
 
-  private isAlertBlackedOut(alert: Alert): boolean {
+  private findBlackoutForAlert(alert: Alert): Blackout | null {
     for (const blackout of this.blackouts) {
       const nameMatchers = blackout.matchers.filter(m => m.name === 'alertname');
       if (nameMatchers.length === 0) continue;
@@ -81,9 +81,21 @@ export class AlertTableComponent implements OnInit {
       const severityOk = severityMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, (alert.severity || '').toLowerCase())
       );
-      if (severityOk) return true;
+      if (!severityOk) continue;
+      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
+      const envOk = envMatchers.every(m =>
+        alert.environments.some(e => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, e.toLowerCase()))
+      );
+      if (!envOk) continue;
+      return blackout;
     }
-    return false;
+    return null;
+  }
+
+  formatBlackoutDate(isoDate: string | null | undefined): string {
+    if (!isoDate) return '';
+    const d = new Date(isoDate);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   private uniqueValues(values: (string | null | undefined)[]): string[] {
@@ -119,11 +131,13 @@ export class AlertTableComponent implements OnInit {
     for (const [name, bucket] of byName) {
       const representative = bucket[0];
       const status = overrideStatus.get(name);
+      const blackout = this.findBlackoutForAlert(representative);
       result.push({
         ...representative,
         is_overridden: status === 'disabled',
         is_partial: status === 'partial',
-        is_blackout: this.isAlertBlackedOut(representative),
+        is_blackout: blackout !== null,
+        blackout,
       });
     }
     return result;
@@ -148,7 +162,10 @@ export class AlertTableComponent implements OnInit {
         if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
         return this.passesCommonFilters(alert);
       })
-      .map(alert => ({ ...alert, is_blackout: this.isAlertBlackedOut(alert) }));
+      .map(alert => {
+        const blackout = this.findBlackoutForAlert(alert);
+        return { ...alert, is_blackout: blackout !== null, blackout };
+      });
   }
 
   get hasSolutionSelected(): boolean {

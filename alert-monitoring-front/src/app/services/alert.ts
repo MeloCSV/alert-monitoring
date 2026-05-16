@@ -16,6 +16,7 @@ export interface Alert {
   is_overridden?: boolean;
   is_partial?: boolean;
   is_blackout?: boolean;
+  blackout?: Blackout | null;
 }
 
 export interface AlertOverride {
