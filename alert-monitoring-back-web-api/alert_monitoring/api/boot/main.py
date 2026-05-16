@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
 import os
 from pathlib import Path
 
@@ -29,3 +30,9 @@ app.add_middleware(
 )
 
 add_session_middleware(app)
+
+
+@app.on_event("startup")
+async def log_env_loaded():
+    if Path(".env").exists():
+        logging.getLogger("uvicorn.error").info("Loading environment from '.env'")
