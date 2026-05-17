@@ -83,24 +83,33 @@ export class AlertTableComponent implements OnInit {
   }
 
   private computeBlackoutInfo(alert: Alert): BlackoutInfo {
+    const isDefault = alert.alert_type === 'Por Defecto';
     const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
     const labelGetters: Record<string, () => string> = {
       alertname: () => alert.name,
       severity:  () => (alert.severity || '').toLowerCase(),
       solucion:  () => (alert.solution || '').toLowerCase(),
       solution:  () => (alert.solution || '').toLowerCase(),
-      namespace: () => (alert.microservice || '').toLowerCase(),
-      alertype:  () => alert.alert_type === 'Por Defecto' ? 'default' : 'adhoc',
+      alertype:  () => isDefault ? 'default' : 'adhoc',
     };
+    if (!isDefault) {
+      labelGetters['namespace'] = () => (alert.microservice || '').toLowerCase();
+    }
+    const ignoredMatcherNames = isDefault
+      ? new Set(['namespace', 'exported_namespace'])
+      : new Set<string>();
 
     const silenced = new Set<string>();
     let noEnvSilenced = false;
     let representative: Blackout | null = null;
 
     for (const blackout of this.blackouts) {
-      const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
-      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
+      const relevantMatchers = blackout.matchers.filter(m => !ignoredMatcherNames.has(m.name));
+      const nonEnvMatchers = relevantMatchers.filter(m => m.name in labelGetters);
+      const envMatchers = relevantMatchers.filter(m => m.name === 'environment' || m.name === 'environments');
       if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
+
+      if (isDefault && !nonEnvMatchers.some(m => m.name === 'alertname')) continue;
 
       const nonEnvOk = nonEnvMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
@@ -187,8 +196,8 @@ export class AlertTableComponent implements OnInit {
         is_overridden: status.state === 'disabled',
         is_partial: status.state === 'partial',
         is_blackout: blackoutInfo.isFullySilenced,
-        is_partial_blackout: !blackoutInfo.isFullySilenced && blackoutInfo.silencedEnvironments.length > 0,
-        blackout_environments: blackoutInfo.silencedEnvironments,
+        is_partial_blackout: false,
+        blackout_environments: [],
         blackout: blackoutInfo.blackout,
         chips: status.excluded,
       });
