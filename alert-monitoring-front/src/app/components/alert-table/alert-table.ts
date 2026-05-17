@@ -7,6 +7,14 @@ import { SearchableSelectComponent } from '../searchable-select/searchable-selec
 type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
 
+interface OverrideStatus {
+  state: 'disabled' | 'partial' | 'active';
+  excluded: string[];
+}
+
+const NAMESPACE_KEYS = ['namespace', 'exported_namespace', 'backend_target_name', 'backend_name'];
+const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'];
+
 @Component({
   selector: 'app-alert-table',
   standalone: true,
@@ -23,7 +31,6 @@ export class AlertTableComponent implements OnInit {
 
   solutionName = '';
 
-  microserviceName = '';
   environment: EnvironmentFilter = '';
   severity: SeverityFilter = '';
 
@@ -70,7 +77,6 @@ export class AlertTableComponent implements OnInit {
   }
 
   private findBlackoutForAlert(alert: Alert): Blackout | null {
-    // Label → valor del alert que podemos evaluar
     const labelGetters: Record<string, () => string | string[]> = {
       alertname:    () => alert.name,
       severity:     () => (alert.severity || '').toLowerCase(),
@@ -83,7 +89,6 @@ export class AlertTableComponent implements OnInit {
 
     for (const blackout of this.blackouts) {
       const evaluatable = blackout.matchers.filter(m => m.name in labelGetters);
-      // Si no hay ningún matcher que podamos evaluar, ignoramos el silencio
       if (evaluatable.length === 0) continue;
 
       const allMatch = evaluatable.every(m => {
@@ -109,15 +114,6 @@ export class AlertTableComponent implements OnInit {
     return Array.from(new Set(values.filter((v): v is string => !!v))).sort();
   }
 
-  get microserviceOptions(): string[] {
-    if (!this.solutionName) return [];
-    return this.uniqueValues(
-      this.alerts
-        .filter(a => a.solution === this.solutionName)
-        .map(a => a.microservice)
-    );
-  }
-
   private passesCommonFilters(alert: Alert): boolean {
     if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
     if (this.severity && alert.severity.toLowerCase() !== this.severity) return false;
@@ -137,25 +133,28 @@ export class AlertTableComponent implements OnInit {
     const result: Alert[] = [];
     for (const [name, bucket] of byName) {
       const representative = bucket[0];
-      const status = overrideStatus.get(name);
+      const status = overrideStatus.get(name) ?? { state: 'active', excluded: [] };
       const blackout = this.findBlackoutForAlert(representative);
       result.push({
         ...representative,
-        is_overridden: status === 'disabled',
-        is_partial: status === 'partial',
+        is_overridden: status.state === 'disabled',
+        is_partial: status.state === 'partial',
         is_blackout: blackout !== null,
         blackout,
+        chips: status.excluded,
       });
     }
     return result;
   }
 
-  private overrideStatusFor(solution: string): Map<string, 'disabled' | 'partial'> {
-    const status = new Map<string, 'disabled' | 'partial'>();
+  private overrideStatusFor(solution: string): Map<string, OverrideStatus> {
+    const status = new Map<string, OverrideStatus>();
     for (const o of this.overrides) {
       if (o.solution !== solution) continue;
-      if (o.is_disabled) status.set(o.alert_name, 'disabled');
-      else if (o.is_partial) status.set(o.alert_name, 'partial');
+      const excluded = o.excluded_items ?? [];
+      if (o.is_disabled) status.set(o.alert_name, { state: 'disabled', excluded: [] });
+      else if (o.is_partial) status.set(o.alert_name, { state: 'partial', excluded });
+      else if (excluded.length) status.set(o.alert_name, { state: 'active', excluded });
     }
     return status;
   }
@@ -166,13 +165,47 @@ export class AlertTableComponent implements OnInit {
       .filter(alert => {
         if (alert.alert_type !== 'Ad-hoc') return false;
         if (alert.solution !== this.solutionName) return false;
-        if (this.microserviceName && alert.microservice !== this.microserviceName) return false;
         return this.passesCommonFilters(alert);
       })
       .map(alert => {
         const blackout = this.findBlackoutForAlert(alert);
-        return { ...alert, is_blackout: blackout !== null, blackout };
+        return {
+          ...alert,
+          is_blackout: blackout !== null,
+          blackout,
+          chips: this.adhocChips(alert),
+        };
       });
+  }
+
+  private adhocChips(alert: Alert): string[] {
+    return this.extractIncludes(alert.condition);
+  }
+
+  private extractIncludes(expr: string | null | undefined): string[] {
+    if (!expr) return [];
+    const out: string[] = [];
+    const keys = [...JOB_KEYS, ...NAMESPACE_KEYS];
+    for (const key of keys) {
+      const regex = new RegExp(`${key}\\s*=~?\\s*"([^"]+)"`, 'g');
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(expr)) !== null) {
+        for (const raw of match[1].split('|')) {
+          const cleaned = this.cleanAlternative(raw);
+          if (cleaned && !out.includes(cleaned)) out.push(cleaned);
+        }
+      }
+    }
+    return out;
+  }
+
+  private cleanAlternative(value: string): string {
+    let v = value.trim();
+    v = v.replace(/^\^/, '').replace(/\$$/, '');
+    for (const suf of ['.*', '.+']) {
+      if (v.endsWith(suf)) v = v.slice(0, -suf.length);
+    }
+    return v.replace(/-$/, '').trim();
   }
 
   get hasSolutionSelected(): boolean {
@@ -181,7 +214,6 @@ export class AlertTableComponent implements OnInit {
 
   onSolutionChange(value: string): void {
     this.solutionName = value;
-    this.microserviceName = '';
     this.cdr.detectChanges();
   }
 
@@ -190,7 +222,6 @@ export class AlertTableComponent implements OnInit {
   }
 
   clearOptionalFilters(): void {
-    this.microserviceName = '';
     this.environment = '';
     this.severity = '';
   }

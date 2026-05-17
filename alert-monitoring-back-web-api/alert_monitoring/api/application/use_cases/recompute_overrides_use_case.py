@@ -38,22 +38,25 @@ class RecomputeOverridesUseCase:
         for name, bucket in buckets.items():
             for sol in solutions:
                 micros = solution_micros[sol]
-                is_disabled, is_partial = _evaluate(bucket, sol, micros)
+                is_disabled, is_partial, excluded_items = _evaluate(bucket, sol, micros)
                 overrides.append(AlertOverride(
                     alert_name=name,
                     solution=sol,
                     is_disabled=is_disabled,
                     is_partial=is_partial,
+                    excluded_items=excluded_items,
                 ))
 
         self.override_repository.replace_all(overrides)
         return len(overrides)
 
 
-def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[bool, bool]:
+def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
     ns_fully_excluded = False
     ns_re_included = False
     partially_excluded = False
+    excluded_items: List[str] = []
+    re_included_patterns: List[str] = []
 
     targets = {solution} | micros
 
@@ -63,27 +66,57 @@ def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[
         job_excl_alts = _extract_alternatives(rule.condition, _JOB_LABEL_KEYS, exclude=True)
 
         for alt in ns_excl_alts:
+            matched_target = False
             for target in targets:
                 if _regex_matches(target, alt):
                     ns_fully_excluded = True
+                    matched_target = True
                 elif _is_prefix_of(target, alt):
                     partially_excluded = True
+                    matched_target = True
+            if matched_target:
+                _append_unique(excluded_items, _display_pattern(alt))
 
         if ns_incl_pattern:
+            re_included_patterns.append(ns_incl_pattern)
             for target in targets:
                 if _regex_matches(target, ns_incl_pattern):
                     ns_re_included = True
                     break
 
         for alt in job_excl_alts:
+            matched_target = False
             for target in targets:
                 if _is_prefix_of(target, alt):
                     partially_excluded = True
+                    matched_target = True
                     break
+            if matched_target:
+                _append_unique(excluded_items, _display_pattern(alt))
+
+    excluded_items = [
+        item for item in excluded_items
+        if not any(_regex_matches(item, pat) for pat in re_included_patterns)
+    ]
 
     is_disabled = ns_fully_excluded and not ns_re_included
     is_partial = partially_excluded and not is_disabled
-    return is_disabled, is_partial
+    if is_disabled:
+        excluded_items = []
+    return is_disabled, is_partial, excluded_items
+
+
+def _append_unique(items: List[str], value: str) -> None:
+    if value and value not in items:
+        items.append(value)
+
+
+def _display_pattern(alternative: str) -> str:
+    cleaned = alternative.strip()
+    for suffix in (".*", ".+"):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[: -len(suffix)]
+    return cleaned.rstrip("-").strip() or alternative
 
 
 def _extract_pattern(expr: Optional[str], keys: Iterable[str], exclude: bool) -> Optional[str]:

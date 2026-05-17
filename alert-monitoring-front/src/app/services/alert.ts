@@ -17,6 +17,7 @@ export interface Alert {
   is_partial?: boolean;
   is_blackout?: boolean;
   blackout?: Blackout | null;
+  chips?: string[];
 }
 
 export interface AlertOverride {
@@ -24,6 +25,7 @@ export interface AlertOverride {
   solution: string;
   is_disabled: boolean;
   is_partial: boolean;
+  excluded_items: string[];
 }
 
 export interface BlackoutMatcher {

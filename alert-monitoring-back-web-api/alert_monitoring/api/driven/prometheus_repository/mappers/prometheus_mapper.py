@@ -26,10 +26,19 @@ class PrometheusMapper:
             condition=rule.expr,
             environments=environments_or_all(self._infer_environments(rule)),
             microservice=self._infer_microservice(rule),
-            solution=labels.get("solucion", "unknown"),
+            solution=self._infer_solution(rule),
             notification_channel=self._infer_channel(labels),
             alert_type="Por Defecto" if is_default else "Ad-hoc",
         )
+
+    def _infer_solution(self, rule: PrometheusRule) -> str:
+        solucion = rule.labels.get("solucion")
+        if solucion:
+            return solucion
+        group_name = rule.group_name or ""
+        cleaned = re.sub(r"\.rules$", "", group_name)
+        cleaned = re.sub(r"-cr[ií]ticas$", "", cleaned)
+        return cleaned or "unknown"
 
     def _infer_channel(self, labels: dict) -> Optional[str]:
         canal = labels.get("canal")

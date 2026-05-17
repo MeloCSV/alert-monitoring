@@ -1,5 +1,6 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field
+from typing import List, Optional
+from sqlmodel import SQLModel, Field, Column
+from sqlalchemy import JSON
 
 
 class AlertOverrideDB(SQLModel, table=True):
@@ -11,3 +12,4 @@ class AlertOverrideDB(SQLModel, table=True):
     solution: str = Field(index=True)
     is_disabled: bool = Field(default=False)
     is_partial: bool = Field(default=False)
+    excluded_items: List[str] = Field(default=[], sa_column=Column(JSON))
