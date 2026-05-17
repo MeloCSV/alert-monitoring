@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride, Blackout } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
@@ -80,11 +80,12 @@ export class AlertTableComponent implements OnInit {
     const labelGetters: Record<string, () => string | string[]> = {
       alertname:    () => alert.name,
       severity:     () => (alert.severity || '').toLowerCase(),
-      environment:  () => alert.environments.map(e => e.toLowerCase()),
-      environments: () => alert.environments.map(e => e.toLowerCase()),
+      environment:  () => this.envCandidates(alert),
+      environments: () => this.envCandidates(alert),
       solucion:     () => (alert.solution || '').toLowerCase(),
       solution:     () => (alert.solution || '').toLowerCase(),
       namespace:    () => (alert.microservice || '').toLowerCase(),
+      alertype:     () => alert.alert_type === 'Por Defecto' ? 'default' : 'adhoc',
     };
 
     for (const blackout of this.blackouts) {
@@ -94,7 +95,7 @@ export class AlertTableComponent implements OnInit {
       const allMatch = evaluatable.every(m => {
         const val = labelGetters[m.name]();
         if (Array.isArray(val)) {
-          return val.some(v => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, v));
+          return this.matchArrayMatcher(m, val);
         }
         return this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, val);
       });
@@ -102,6 +103,27 @@ export class AlertTableComponent implements OnInit {
       if (allMatch) return blackout;
     }
     return null;
+  }
+
+  private matchArrayMatcher(m: BlackoutMatcher, vals: string[]): boolean {
+    if (vals.length === 0) return false;
+    if (m.is_equal) {
+      return vals.some(v => this.matchesBlackoutValue(m.value, m.is_regex, true, v));
+    }
+    return vals.every(v => this.matchesBlackoutValue(m.value, m.is_regex, false, v));
+  }
+
+  private envCandidates(alert: Alert): string[] {
+    const envs = (alert.environments || []).map(e => e.toLowerCase());
+    const out: string[] = [];
+    for (const env of envs) {
+      if (!out.includes(env)) out.push(env);
+      const ocp = `ocp-${env}`;
+      const gcp = `gcp-${env}`;
+      if (!out.includes(ocp)) out.push(ocp);
+      if (!out.includes(gcp)) out.push(gcp);
+    }
+    return out;
   }
 
   formatBlackoutDate(isoDate: string | null | undefined): string {
