@@ -12,6 +12,7 @@ class AlertOverrideDBMapper:
             solution=override.solution,
             is_disabled=override.is_disabled,
             is_partial=override.is_partial,
+            excluded_items=override.excluded_items,
         )
 
     def to_domain(self, db: AlertOverrideDB) -> AlertOverride:
@@ -20,6 +21,7 @@ class AlertOverrideDBMapper:
             solution=db.solution,
             is_disabled=db.is_disabled,
             is_partial=db.is_partial,
+            excluded_items=db.excluded_items or [],
         )
 
     def to_domain_list(self, items: List[AlertOverrideDB]) -> List[AlertOverride]:

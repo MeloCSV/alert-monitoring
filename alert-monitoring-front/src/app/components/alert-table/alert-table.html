@@ -32,16 +32,6 @@
       @if (showOptionalFilters && hasSolutionSelected) {
         <div class="filters-optional">
           <div class="filter">
-            <label>Microservicio</label>
-            <select [(ngModel)]="microserviceName" class="select">
-              <option value="">Todos los microservicios</option>
-              @for (option of microserviceOptions; track option) {
-                <option [value]="option">{{ option }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="filter">
             <label>Entorno</label>
             <select [(ngModel)]="environment" class="select">
               <option value="">Todos los entornos</option>
@@ -101,7 +91,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @for (alert of defaultAlerts; track alert.name + '-' + alert.microservice) {
+                    @for (alert of defaultAlerts; track alert.name) {
                       <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial" [class.blackout]="alert.is_blackout">
                         <td>
                           <div class="alert-name">
@@ -120,6 +110,13 @@
                           }
                           @if (alert.is_blackout) {
                             <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
+                          }
+                          @if (!alert.is_overridden && alert.chips && alert.chips.length) {
+                            <div class="chip-list">
+                              @for (chip of alert.chips; track chip) {
+                                <span class="chip chip-excluded" title="Excluido del alarmado por defecto">{{ chip }}</span>
+                              }
+                            </div>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
@@ -150,7 +147,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @for (alert of adhocAlerts; track alert.name + '-' + alert.microservice) {
+                    @for (alert of adhocAlerts; track alert.name + '-' + alert.condition) {
                       <tr [class.blackout]="alert.is_blackout">
                         <td>
                           <div class="alert-name">
@@ -164,6 +161,13 @@
                           }
                           @if (alert.is_blackout) {
                             <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
+                          }
+                          @if (alert.chips && alert.chips.length) {
+                            <div class="chip-list">
+                              @for (chip of alert.chips; track chip) {
+                                <span class="chip chip-adhoc" title="Job o namespace alarmado">{{ chip }}</span>
+                              }
+                            </div>
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>

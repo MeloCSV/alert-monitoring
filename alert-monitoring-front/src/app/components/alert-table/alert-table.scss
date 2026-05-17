@@ -314,3 +314,32 @@ tr.blackout {
 
   &:hover { background: #e0e0e0; }
 }
+
+.chip-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.chip-excluded {
+  background: #fdecec;
+  color: #b3261e;
+  border-color: #f4b2b0;
+}
+
+.chip-adhoc {
+  background: #e8f3ec;
+  color: #1f4a2b;
+  border-color: #b9dcc6;
+}
