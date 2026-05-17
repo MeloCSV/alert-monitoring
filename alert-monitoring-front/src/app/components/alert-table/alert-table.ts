@@ -108,6 +108,7 @@ export class AlertTableComponent implements OnInit {
       if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
 
       if (isDefault) {
+        if (!nonEnvMatchers.some(m => m.name === 'alertname')) continue;
         if (!nonEnvMatchers.some(m => m.name === 'namespace' || m.name === 'exported_namespace')) continue;
       }
 
