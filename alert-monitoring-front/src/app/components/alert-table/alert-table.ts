@@ -12,6 +12,12 @@ interface OverrideStatus {
   excluded: string[];
 }
 
+interface BlackoutInfo {
+  isFullySilenced: boolean;
+  silencedEnvironments: string[];
+  blackout: Blackout | null;
+}
+
 const NAMESPACE_KEYS = ['namespace', 'exported_namespace', 'backend_target_name', 'backend_name'];
 const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'];
 
@@ -76,33 +82,54 @@ export class AlertTableComponent implements OnInit {
     return isEqual ? hit : !hit;
   }
 
-  private findBlackoutForAlert(alert: Alert): Blackout | null {
-    const labelGetters: Record<string, () => string | string[]> = {
-      alertname:    () => alert.name,
-      severity:     () => (alert.severity || '').toLowerCase(),
-      environment:  () => this.envCandidates(alert),
-      environments: () => this.envCandidates(alert),
-      solucion:     () => (alert.solution || '').toLowerCase(),
-      solution:     () => (alert.solution || '').toLowerCase(),
-      namespace:    () => (alert.microservice || '').toLowerCase(),
-      alertype:     () => alert.alert_type === 'Por Defecto' ? 'default' : 'adhoc',
+  private computeBlackoutInfo(alert: Alert): BlackoutInfo {
+    const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
+    const labelGetters: Record<string, () => string> = {
+      alertname: () => alert.name,
+      severity:  () => (alert.severity || '').toLowerCase(),
+      solucion:  () => (alert.solution || '').toLowerCase(),
+      solution:  () => (alert.solution || '').toLowerCase(),
+      namespace: () => (alert.microservice || '').toLowerCase(),
+      alertype:  () => alert.alert_type === 'Por Defecto' ? 'default' : 'adhoc',
     };
 
+    const silenced = new Set<string>();
+    let noEnvSilenced = false;
+    let representative: Blackout | null = null;
+
     for (const blackout of this.blackouts) {
-      const evaluatable = blackout.matchers.filter(m => m.name in labelGetters);
-      if (evaluatable.length === 0) continue;
+      const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
+      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
+      if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
 
-      const allMatch = evaluatable.every(m => {
-        const val = labelGetters[m.name]();
-        if (Array.isArray(val)) {
-          return this.matchArrayMatcher(m, val);
+      const nonEnvOk = nonEnvMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
+      );
+      if (!nonEnvOk) continue;
+
+      if (envMatchers.length === 0) {
+        if (alertEnvs.length === 0) noEnvSilenced = true;
+        else alertEnvs.forEach(e => silenced.add(e));
+        if (representative === null) representative = blackout;
+        continue;
+      }
+
+      for (const env of alertEnvs) {
+        const candidates = this.envCandidatesFor(env);
+        const envOk = envMatchers.every(m => this.matchArrayMatcher(m, candidates));
+        if (envOk) {
+          silenced.add(env);
+          if (representative === null) representative = blackout;
         }
-        return this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, val);
-      });
-
-      if (allMatch) return blackout;
+      }
     }
-    return null;
+
+    const silencedList = alertEnvs.filter(e => silenced.has(e));
+    const isFullySilenced = alertEnvs.length === 0
+      ? noEnvSilenced
+      : silencedList.length === alertEnvs.length && silencedList.length > 0;
+
+    return { isFullySilenced, silencedEnvironments: silencedList, blackout: representative };
   }
 
   private matchArrayMatcher(m: BlackoutMatcher, vals: string[]): boolean {
@@ -113,17 +140,15 @@ export class AlertTableComponent implements OnInit {
     return vals.every(v => this.matchesBlackoutValue(m.value, m.is_regex, false, v));
   }
 
-  private envCandidates(alert: Alert): string[] {
-    const envs = (alert.environments || []).map(e => e.toLowerCase());
-    const out: string[] = [];
-    for (const env of envs) {
-      if (!out.includes(env)) out.push(env);
-      const ocp = `ocp-${env}`;
-      const gcp = `gcp-${env}`;
-      if (!out.includes(ocp)) out.push(ocp);
-      if (!out.includes(gcp)) out.push(gcp);
-    }
-    return out;
+  private envCandidatesFor(env: string): string[] {
+    const e = env.toLowerCase();
+    return [e, `ocp-${e}`, `gcp-${e}`];
+  }
+
+  partialBlackoutLabel(alert: Alert): string {
+    const envs = alert.blackout_environments ?? [];
+    if (envs.length === 1) return `Silenciada en entorno: ${envs[0]}`;
+    return `Silenciada en entornos: ${envs.join(', ')}`;
   }
 
   formatBlackoutDate(isoDate: string | null | undefined): string {
@@ -156,13 +181,15 @@ export class AlertTableComponent implements OnInit {
     for (const [name, bucket] of byName) {
       const representative = bucket[0];
       const status = overrideStatus.get(name) ?? { state: 'active', excluded: [] };
-      const blackout = this.findBlackoutForAlert(representative);
+      const blackoutInfo = this.computeBlackoutInfo(representative);
       result.push({
         ...representative,
         is_overridden: status.state === 'disabled',
         is_partial: status.state === 'partial',
-        is_blackout: blackout !== null,
-        blackout,
+        is_blackout: blackoutInfo.isFullySilenced,
+        is_partial_blackout: !blackoutInfo.isFullySilenced && blackoutInfo.silencedEnvironments.length > 0,
+        blackout_environments: blackoutInfo.silencedEnvironments,
+        blackout: blackoutInfo.blackout,
         chips: status.excluded,
       });
     }
@@ -190,11 +217,13 @@ export class AlertTableComponent implements OnInit {
         return this.passesCommonFilters(alert);
       })
       .map(alert => {
-        const blackout = this.findBlackoutForAlert(alert);
+        const blackoutInfo = this.computeBlackoutInfo(alert);
         return {
           ...alert,
-          is_blackout: blackout !== null,
-          blackout,
+          is_blackout: blackoutInfo.isFullySilenced,
+          is_partial_blackout: !blackoutInfo.isFullySilenced && blackoutInfo.silencedEnvironments.length > 0,
+          blackout_environments: blackoutInfo.silencedEnvironments,
+          blackout: blackoutInfo.blackout,
           chips: this.adhocChips(alert),
         };
       });
