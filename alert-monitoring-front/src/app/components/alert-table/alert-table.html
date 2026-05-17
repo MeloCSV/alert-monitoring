@@ -104,14 +104,12 @@
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
                           @if (alert.is_overridden) {
-                            <span class="overridden-tag">Sustituida</span>
+                            <span class="overridden-tag">Deshabilitada</span>
                           } @else if (alert.is_partial) {
                             <span class="partial-tag">Alarmado parcialmente</span>
                           }
                           @if (alert.is_blackout) {
                             <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
-                          } @else if (alert.is_partial_blackout) {
-                            <span class="blackout-tag">{{ partialBlackoutLabel(alert) }}</span>
                           }
                           @if (!alert.is_overridden && alert.chips && alert.chips.length) {
                             <div class="chip-list">
