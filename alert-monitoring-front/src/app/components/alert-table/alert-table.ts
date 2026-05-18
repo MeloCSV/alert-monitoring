@@ -4,7 +4,6 @@ import { forkJoin } from 'rxjs';
 import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
-type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
 
 interface OverrideStatus {
@@ -38,11 +37,12 @@ export class AlertTableComponent implements OnInit {
   solutionName = '';
 
   environment: EnvironmentFilter = '';
-  severity: SeverityFilter = '';
+  channel = '';
 
   showOptionalFilters = false;
 
   solutionOptions: string[] = [];
+  channelOptions: string[] = [];
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
@@ -57,6 +57,7 @@ export class AlertTableComponent implements OnInit {
         this.overrides = overrides;
         this.blackouts = blackouts;
         this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
+        this.channelOptions = this.uniqueValues(alerts.map(a => a.notification_channel));
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -173,7 +174,7 @@ export class AlertTableComponent implements OnInit {
 
   private passesCommonFilters(alert: Alert): boolean {
     if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
-    if (this.severity && alert.severity.toLowerCase() !== this.severity) return false;
+    if (this.channel && (alert.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
     return true;
   }
 
@@ -301,7 +302,7 @@ export class AlertTableComponent implements OnInit {
 
   clearOptionalFilters(): void {
     this.environment = '';
-    this.severity = '';
+    this.channel = '';
   }
 
   environmentsLabel(alert: Alert): string {
