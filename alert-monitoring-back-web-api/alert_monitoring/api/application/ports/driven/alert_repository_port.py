@@ -10,5 +10,9 @@ class AlertRepositoryPort(ABC):
         pass
 
     @abstractmethod
+    def replace_for_source_and_cluster(self, source_tool: str, cluster: Optional[str], alerts: List[Alert]) -> None:
+        pass
+
+    @abstractmethod
     def get_all(self, filters:Optional[AlertFilter] = None) -> List[Alert]:
         pass
