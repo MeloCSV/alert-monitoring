@@ -20,5 +20,8 @@ class PrometheusAdapter:
         rules: List[PrometheusRule] = []
         for cluster in clusters:
             logger.info("Recogiendo PrometheusRules del cluster %s", cluster.name)
-            rules.extend(self.client.fetch_rules(cluster))
+            cluster_rules = self.client.fetch_rules(cluster)
+            for rule in cluster_rules:
+                rule.cluster_name = cluster.name
+            rules.extend(cluster_rules)
         return rules

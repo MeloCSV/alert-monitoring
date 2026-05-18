@@ -13,6 +13,7 @@ export interface Alert {
   solution: string | null;
   notification_channel: string | null;
   alert_type: 'Por Defecto' | 'Ad-hoc';
+  cluster: string | null;
   is_overridden?: boolean;
   is_partial?: boolean;
   is_blackout?: boolean;

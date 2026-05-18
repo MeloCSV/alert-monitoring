@@ -12,3 +12,4 @@ class AlertResponse(BaseModel):
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
     alert_type: str = "Ad-hoc"
+    cluster: Optional[str] = None

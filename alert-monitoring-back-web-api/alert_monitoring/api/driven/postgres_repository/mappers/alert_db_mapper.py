@@ -17,6 +17,7 @@ class AlertDBMapper:
             solution=alert.solution,
             notification_channel=alert.notification_channel,
             alert_type=alert.alert_type,
+            cluster=alert.cluster,
         )
 
     def to_domain(self, alert_db: AlertDB) -> Alert:
@@ -31,6 +32,7 @@ class AlertDBMapper:
             solution=alert_db.solution,
             notification_channel=alert_db.notification_channel,
             alert_type=alert_db.alert_type,
+            cluster=alert_db.cluster,
         )
 
     def to_domain_list(self, alerts_db: List[AlertDB]) -> List[Alert]:
