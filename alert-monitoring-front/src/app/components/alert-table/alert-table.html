@@ -43,12 +43,12 @@
           </div>
 
           <div class="filter">
-            <label>Severidad</label>
-            <select [(ngModel)]="severity" class="select">
-              <option value="">Todas las severidades</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
-              <option value="principal">Principal</option>
+            <label>Canal</label>
+            <select [(ngModel)]="channel" class="select">
+              <option value="">Todos los canales</option>
+              @for (ch of channelOptions; track ch) {
+                <option [value]="ch">{{ ch }}</option>
+              }
             </select>
           </div>
 
