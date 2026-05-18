@@ -343,30 +343,3 @@ tr.blackout {
   color: #1f4a2b;
   border-color: #b9dcc6;
 }
-
-.cluster-badge {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 10px;
-  background: #e8edf7;
-  color: #1a3a6b;
-  border: 1px solid #b3c4e8;
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.source-badge {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 10px;
-  background: #f0ecfb;
-  color: #4a2e8a;
-  border: 1px solid #c9b8ee;
-  white-space: nowrap;
-}

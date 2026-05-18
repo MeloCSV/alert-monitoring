@@ -88,7 +88,6 @@
                       <th>Alarma</th>
                       <th>Canal de salida</th>
                       <th>Entorno</th>
-                      <th>Cluster</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -122,13 +121,6 @@
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
                         <td>{{ environmentsLabel(alert) }}</td>
-                        <td>
-                          @if (alert.cluster) {
-                            <span class="cluster-badge" [title]="alert.cluster">{{ alert.cluster }}</span>
-                          } @else {
-                            <span>-</span>
-                          }
-                        </td>
                       </tr>
                     }
                   </tbody>
@@ -152,7 +144,6 @@
                       <th>Alarma</th>
                       <th>Canal de salida</th>
                       <th>Entorno</th>
-                      <th>Origen</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -183,15 +174,6 @@
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
                         <td>{{ environmentsLabel(alert) }}</td>
-                        <td>
-                          @if (alert.cluster) {
-                            <span class="cluster-badge" [title]="alert.cluster">{{ alert.cluster }}</span>
-                          } @else if (alert.source_tool) {
-                            <span class="source-badge">{{ alert.source_tool }}</span>
-                          } @else {
-                            <span>-</span>
-                          }
-                        </td>
                       </tr>
                     }
                   </tbody>
