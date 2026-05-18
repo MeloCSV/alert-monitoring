@@ -42,7 +42,6 @@ export class AlertTableComponent implements OnInit {
   showOptionalFilters = false;
 
   solutionOptions: string[] = [];
-  channelOptions: string[] = [];
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
@@ -57,7 +56,6 @@ export class AlertTableComponent implements OnInit {
         this.overrides = overrides;
         this.blackouts = blackouts;
         this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
-        this.channelOptions = this.uniqueValues(alerts.map(a => a.notification_channel));
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -287,12 +285,20 @@ export class AlertTableComponent implements OnInit {
     return v.replace(/-$/, '').trim();
   }
 
+  get channelOptions(): string[] {
+    if (!this.solutionName) return [];
+    return this.uniqueValues(
+      this.alerts.filter(a => a.solution === this.solutionName).map(a => a.notification_channel)
+    );
+  }
+
   get hasSolutionSelected(): boolean {
     return !!this.solutionName;
   }
 
   onSolutionChange(value: string): void {
     this.solutionName = value;
+    this.channel = '';
     this.cdr.detectChanges();
   }
 
