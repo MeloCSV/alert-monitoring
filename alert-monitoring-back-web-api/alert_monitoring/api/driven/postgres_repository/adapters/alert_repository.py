@@ -26,6 +26,18 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
             self.sqlalchemy_repository.add(alert_db)
         self.sqlalchemy_repository.commit()
 
+    def replace_for_source_and_cluster(self, source_tool: str, cluster: Optional[str], alerts: List[Alert]) -> None:
+        self.logger.info(f"Reemplazando alertas para source_tool='{source_tool}', cluster='{cluster}': {len(alerts)} alertas")
+        query = self.sqlalchemy_repository.query(AlertDB).filter(AlertDB.source_tool == source_tool)
+        if cluster is None:
+            query = query.filter(AlertDB.cluster == None)  # noqa: E711
+        else:
+            query = query.filter(AlertDB.cluster == cluster)
+        query.delete()
+        for alert in alerts:
+            self.sqlalchemy_repository.add(self.alert_db_mapper.to_db(alert))
+        self.sqlalchemy_repository.commit()
+
     def get_all(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
         self.logger.info(f"Consultando alertas con filtros: {filters}")
         query = self.sqlalchemy_repository.query(AlertDB)

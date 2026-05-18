@@ -62,7 +62,12 @@ class AlertService(AlertServicePort):
                 cluster, [r for r in catalog_rules if r.cluster == cluster]
             )
 
-        self.save_use_case.execute(adhoc_alerts)
+        adhoc_clusters = {a.cluster for a in adhoc_alerts}
+        for cluster in adhoc_clusters:
+            self.alert_repository.replace_for_source_and_cluster(
+                "Prometheus", cluster, [a for a in adhoc_alerts if a.cluster == cluster]
+            )
+
         self.recompute_overrides_use_case.execute()
         return len(catalog_rules) + len(adhoc_alerts)
 
@@ -71,7 +76,7 @@ class AlertService(AlertServicePort):
         raw_rules = self.kibana_adapter.fetch_rules()
         rules = self.elastic_adapter.parse_rules(raw_rules)
         alerts = self.elastic_mapper.to_domain(rules)
-        self.save_use_case.execute(alerts)
+        self.alert_repository.replace_for_source_and_cluster("Elastic", None, alerts)
         self.recompute_overrides_use_case.execute()
         return len(alerts)
 
