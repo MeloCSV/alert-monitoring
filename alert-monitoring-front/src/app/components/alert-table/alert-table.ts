@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, DefaultAlertRule } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type SeverityFilter = '' | 'warning' | 'critical' | 'principal';
@@ -30,6 +30,7 @@ const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'
 })
 export class AlertTableComponent implements OnInit {
   alerts: Alert[] = [];
+  defaultCatalog: DefaultAlertRule[] = [];
   overrides: AlertOverride[] = [];
   blackouts: Blackout[] = [];
   loading = true;
@@ -49,11 +50,13 @@ export class AlertTableComponent implements OnInit {
   ngOnInit(): void {
     forkJoin({
       alerts: this.alertService.getAlerts(),
+      defaultCatalog: this.alertService.getDefaultCatalog(),
       overrides: this.alertService.getOverrides(),
       blackouts: this.alertService.getBlackouts(),
     }).subscribe({
-      next: ({ alerts, overrides, blackouts }) => {
+      next: ({ alerts, defaultCatalog, overrides, blackouts }) => {
         this.alerts = alerts;
+        this.defaultCatalog = defaultCatalog;
         this.overrides = overrides;
         this.blackouts = blackouts;
         this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
@@ -180,36 +183,42 @@ export class AlertTableComponent implements OnInit {
   get defaultAlerts(): Alert[] {
     if (!this.solutionName) return [];
 
-    // Determine which clusters have Prometheus alerts for the selected solution.
-    // Elastic alerts have no cluster and no default alert concept, so they are excluded here.
+    // Clusters where this solution has Prometheus ad-hoc alerts
     const clustersWithSolution = new Set(
       this.alerts
         .filter(a => a.source_tool === 'Prometheus' && a.solution === this.solutionName && a.cluster)
         .map(a => a.cluster!)
     );
 
-    const defaults = this.alerts.filter(a => {
-      if (a.alert_type !== 'Por Defecto') return false;
-      if (!this.passesCommonFilters(a)) return false;
-      // If we know which clusters the solution runs in, restrict defaults to those clusters.
-      if (clustersWithSolution.size > 0 && (!a.cluster || !clustersWithSolution.has(a.cluster))) return false;
+    // Filter catalog to matching clusters and apply common filters
+    const catalogEntries = this.defaultCatalog.filter(r => {
+      if (clustersWithSolution.size > 0 && !clustersWithSolution.has(r.cluster)) return false;
+      if (this.environment && !r.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
+      if (this.severity && r.severity.toLowerCase() !== this.severity) return false;
       return true;
     });
 
-    const byName = new Map<string, Alert[]>();
-    for (const alert of defaults) {
-      const bucket = byName.get(alert.name) ?? [];
-      bucket.push(alert);
-      byName.set(alert.name, bucket);
-    }
     const overrideStatus = this.overrideStatusFor(this.solutionName);
-    const result: Alert[] = [];
-    for (const [name, bucket] of byName) {
-      const representative = bucket[0];
-      const status = overrideStatus.get(name) ?? { state: 'active', excluded: [] };
-      const blackoutInfo = this.computeBlackoutInfo(representative);
-      result.push({
-        ...representative,
+    return catalogEntries.map(rule => {
+      // Use technical name for override and blackout lookup; display_name for the UI
+      const status = overrideStatus.get(rule.name) ?? { state: 'active', excluded: [] };
+      const proxy: Alert = {
+        name: rule.name,
+        description: rule.description,
+        source_tool: 'Prometheus',
+        severity: rule.severity,
+        condition: rule.condition,
+        environments: rule.environments,
+        microservice: null,
+        solution: this.solutionName,
+        notification_channel: rule.notification_channel,
+        alert_type: 'Por Defecto',
+        cluster: rule.cluster,
+      };
+      const blackoutInfo = this.computeBlackoutInfo(proxy);
+      return {
+        ...proxy,
+        name: rule.display_name,
         is_overridden: status.state === 'disabled',
         is_partial: status.state === 'partial',
         is_blackout: blackoutInfo.isFullySilenced,
@@ -217,9 +226,8 @@ export class AlertTableComponent implements OnInit {
         blackout_environments: [],
         blackout: blackoutInfo.blackout,
         chips: status.excluded,
-      });
-    }
-    return result;
+      };
+    });
   }
 
   private overrideStatusFor(solution: string): Map<string, OverrideStatus> {

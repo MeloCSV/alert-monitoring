@@ -2,6 +2,17 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface DefaultAlertRule {
+  name: string;
+  display_name: string;
+  description: string;
+  severity: string;
+  condition: string;
+  environments: string[];
+  notification_channel: string | null;
+  cluster: string;
+}
+
 export interface Alert {
   name: string;
   description: string;
@@ -55,6 +66,10 @@ export class AlertService {
 
   getAlerts(): Observable<Alert[]> {
     return this.http.get<Alert[]>(this.apiUrl);
+  }
+
+  getDefaultCatalog(): Observable<DefaultAlertRule[]> {
+    return this.http.get<DefaultAlertRule[]>(`${this.apiUrl}/defaults`);
   }
 
   getOverrides(): Observable<AlertOverride[]> {

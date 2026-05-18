@@ -2,6 +2,7 @@ import re
 from typing import List, Optional
 
 from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.domain.models.default_alert_rule import DefaultAlertRule
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.driven.shared.alert_normalization import (
     BOOL_CHANNEL_LABELS,
@@ -13,20 +14,20 @@ from alert_monitoring.api.driven.shared.alert_normalization import (
 
 class PrometheusMapper:
     def to_domain(self, rules: List[PrometheusRule]) -> List[Alert]:
-        return [self._map_rule(rule) for rule in rules]
+        return [self._map_rule(rule) for rule in rules if not self._is_default(rule)]
+
+    def to_catalog(self, rules: List[PrometheusRule]) -> List[DefaultAlertRule]:
+        return [self._map_default_rule(rule) for rule in rules if self._is_default(rule)]
+
+    def _is_default(self, rule: PrometheusRule) -> bool:
+        return str(rule.labels.get("alertype", "")).lower() == "default"
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
-        is_default = str(labels.get("alertype", "")).lower() == "default"
-
-        raw_name = rule.alert.split()[0] if rule.alert else rule.alert
-        display = DEFAULT_ALERT_DISPLAY.get(raw_name) if is_default else None
-        name = display[0] if display else rule.alert
-        description = display[1] if display else rule.annotations.get("message", "Sin descripción")
 
         return Alert(
-            name=name,
-            description=description,
+            name=rule.alert,
+            description=rule.annotations.get("message", "Sin descripción"),
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
             condition=rule.expr,
@@ -34,8 +35,26 @@ class PrometheusMapper:
             microservice=self._infer_microservice(rule),
             solution=self._infer_solution(rule),
             notification_channel=self._infer_channel(labels),
-            alert_type="Por Defecto" if is_default else "Ad-hoc",
+            alert_type="Ad-hoc",
             cluster=rule.cluster_name or None,
+        )
+
+    def _map_default_rule(self, rule: PrometheusRule) -> DefaultAlertRule:
+        labels = rule.labels
+        raw_name = rule.alert.split()[0] if rule.alert else rule.alert
+        display = DEFAULT_ALERT_DISPLAY.get(raw_name)
+        display_name = display[0] if display else raw_name
+        description = display[1] if display else rule.annotations.get("message", "Sin descripción")
+
+        return DefaultAlertRule(
+            name=raw_name,
+            display_name=display_name,
+            description=description,
+            severity=labels.get("severity", "unknown"),
+            condition=rule.expr,
+            environments=environments_or_all(self._infer_environments(rule)),
+            notification_channel=self._infer_channel(labels),
+            cluster=rule.cluster_name or "unknown",
         )
 
     def _infer_solution(self, rule: PrometheusRule) -> str:

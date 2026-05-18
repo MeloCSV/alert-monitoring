@@ -4,7 +4,9 @@ from typing import Iterable, List, Optional, Set, Tuple
 
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
+from alert_monitoring.api.application.ports.driven.default_alert_rule_repository_port import DefaultAlertRuleRepositoryPort
 from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 
 
@@ -13,26 +15,32 @@ _JOB_LABEL_KEYS = ("job_name", "deployment", "horizontalpodautoscaler")
 
 
 class RecomputeOverridesUseCase:
-    def __init__(self, alert_repository: AlertRepositoryPort, override_repository: AlertOverrideRepositoryPort):
+    def __init__(
+        self,
+        default_catalog_repository: DefaultAlertRuleRepositoryPort,
+        alert_repository: AlertRepositoryPort,
+        override_repository: AlertOverrideRepositoryPort,
+    ):
+        self.default_catalog_repository = default_catalog_repository
         self.alert_repository = alert_repository
         self.override_repository = override_repository
 
     def execute(self) -> int:
-        alerts = self.alert_repository.get_all()
-        default_alerts = [a for a in alerts if a.alert_type == "Por Defecto"]
+        default_rules = self.default_catalog_repository.get_all()
+        adhoc_alerts = self.alert_repository.get_all(AlertFilter(alert_type="Ad-hoc"))
 
         # Build solution → set of microservices from Ad-hoc alerts
         solution_micros: dict[str, Set[str]] = defaultdict(set)
-        for a in alerts:
-            if a.alert_type == "Ad-hoc" and a.solution and a.solution != "unknown" and a.microservice:
+        for a in adhoc_alerts:
+            if a.solution and a.solution != "unknown" and a.microservice:
                 solution_micros[a.solution].add(a.microservice)
 
         solutions = sorted(solution_micros.keys())
 
-        # Group default alerts by name
-        buckets: dict[str, List[Alert]] = defaultdict(list)
-        for alert in default_alerts:
-            buckets[alert.name].append(alert)
+        # Group default rules by technical name
+        buckets: dict[str, list] = defaultdict(list)
+        for rule in default_rules:
+            buckets[rule.name].append(rule)
 
         overrides: List[AlertOverride] = []
         for name, bucket in buckets.items():
@@ -51,7 +59,7 @@ class RecomputeOverridesUseCase:
         return len(overrides)
 
 
-def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
+def _evaluate(rules: Iterable, solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
     ns_fully_excluded = False
     ns_re_included = False
     partially_excluded = False
