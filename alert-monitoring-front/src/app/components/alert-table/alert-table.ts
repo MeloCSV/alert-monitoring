@@ -190,11 +190,15 @@ export class AlertTableComponent implements OnInit {
         .map(a => a.cluster!)
     );
 
-    // Filter catalog to matching clusters and apply common filters
+    // Filter catalog to matching clusters and apply common filters, then deduplicate by name
+    // (the same default alert may appear in both normal and criticas groups or across clusters)
+    const seenNames = new Set<string>();
     const catalogEntries = this.defaultCatalog.filter(r => {
       if (clustersWithSolution.size > 0 && !clustersWithSolution.has(r.cluster)) return false;
       if (this.environment && !r.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
       if (this.severity && r.severity.toLowerCase() !== this.severity) return false;
+      if (seenNames.has(r.name)) return false;
+      seenNames.add(r.name);
       return true;
     });
 
