@@ -10,3 +10,4 @@ class DefaultAlertRuleResponse(BaseModel):
     environments: List[str]
     notification_channel: Optional[str] = None
     cluster: str
+    solution: Optional[str] = None

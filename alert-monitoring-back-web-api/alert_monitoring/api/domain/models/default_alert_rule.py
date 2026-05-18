@@ -10,3 +10,4 @@ class DefaultAlertRule(BaseModel):
     environments: List[str] = Field(default_factory=list)
     notification_channel: Optional[str] = None
     cluster: str = Field(..., description="Cluster K8S de origen")
+    solution: Optional[str] = Field(None, description="Solución propietaria (solucion label). Null = genérica para todas.")
