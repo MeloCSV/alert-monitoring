@@ -13,6 +13,7 @@ class DefaultAlertRuleDBMapper:
             condition=rule.condition,
             environments=rule.environments,
             notification_channel=rule.notification_channel,
+            solution=rule.solution,
         )
 
     def to_domain(self, db: DefaultAlertRuleDB) -> DefaultAlertRule:
@@ -25,6 +26,7 @@ class DefaultAlertRuleDBMapper:
             condition=db.condition,
             environments=db.environments or [],
             notification_channel=db.notification_channel,
+            solution=db.solution,
         )
 
     def to_domain_list(self, dbs: List[DefaultAlertRuleDB]) -> List[DefaultAlertRule]:

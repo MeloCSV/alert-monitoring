@@ -15,3 +15,4 @@ class DefaultAlertRuleDB(SQLModel, table=True):
     condition: str
     environments: List[str] = Field(default=[], sa_column=Column(JSON))
     notification_channel: Optional[str] = None
+    solution: Optional[str] = None

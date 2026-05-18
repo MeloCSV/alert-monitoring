@@ -195,6 +195,7 @@ export class AlertTableComponent implements OnInit {
     const seenNames = new Set<string>();
     const catalogEntries = this.defaultCatalog.filter(r => {
       if (clustersWithSolution.size > 0 && !clustersWithSolution.has(r.cluster)) return false;
+      if (r.solution && r.solution !== this.solutionName) return false;
       if (this.environment && !r.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
       if (this.severity && r.severity.toLowerCase() !== this.severity) return false;
       if (seenNames.has(r.name)) return false;

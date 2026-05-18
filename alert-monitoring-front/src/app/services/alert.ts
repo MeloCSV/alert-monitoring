@@ -11,6 +11,7 @@ export interface DefaultAlertRule {
   environments: string[];
   notification_channel: string | null;
   cluster: string;
+  solution: string | null;
 }
 
 export interface Alert {
