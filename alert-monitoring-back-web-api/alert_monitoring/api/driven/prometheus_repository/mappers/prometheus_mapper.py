@@ -35,6 +35,7 @@ class PrometheusMapper:
             solution=self._infer_solution(rule),
             notification_channel=self._infer_channel(labels),
             alert_type="Por Defecto" if is_default else "Ad-hoc",
+            cluster=rule.cluster_name or None,
         )
 
     def _infer_solution(self, rule: PrometheusRule) -> str:

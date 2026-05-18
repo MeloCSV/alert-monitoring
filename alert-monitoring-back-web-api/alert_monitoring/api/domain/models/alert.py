@@ -16,3 +16,4 @@ class Alert(BaseModel):
         default="Ad-hoc",
         description="Indica si es un alertado por defecto o Ad-hoc"
     )
+    cluster: Optional[str] = Field(None, description="Cluster K8S de origen (nombre del cluster)")

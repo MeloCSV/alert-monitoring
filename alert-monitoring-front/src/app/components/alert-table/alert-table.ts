@@ -179,7 +179,24 @@ export class AlertTableComponent implements OnInit {
 
   get defaultAlerts(): Alert[] {
     if (!this.solutionName) return [];
-    const defaults = this.alerts.filter(a => a.alert_type === 'Por Defecto' && this.passesCommonFilters(a));
+
+    // Determine which clusters have Prometheus alerts for the selected solution.
+    // Elastic alerts have no cluster and no default alert concept, so they are excluded here.
+    const clustersWithSolution = new Set(
+      this.alerts
+        .filter(a => a.source_tool === 'Prometheus' && a.solution === this.solutionName && a.cluster)
+        .map(a => a.cluster!)
+    );
+
+    const defaults = this.alerts.filter(a => {
+      if (a.alert_type !== 'Por Defecto') return false;
+      if (!this.passesCommonFilters(a)) return false;
+      // If we know which clusters the solution runs in, restrict defaults to those clusters.
+      // If no cluster info is available on an alert (legacy data), keep it.
+      if (clustersWithSolution.size > 0 && a.cluster && !clustersWithSolution.has(a.cluster)) return false;
+      return true;
+    });
+
     const byName = new Map<string, Alert[]>();
     for (const alert of defaults) {
       const bucket = byName.get(alert.name) ?? [];
