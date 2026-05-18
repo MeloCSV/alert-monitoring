@@ -192,8 +192,7 @@ export class AlertTableComponent implements OnInit {
       if (a.alert_type !== 'Por Defecto') return false;
       if (!this.passesCommonFilters(a)) return false;
       // If we know which clusters the solution runs in, restrict defaults to those clusters.
-      // If no cluster info is available on an alert (legacy data), keep it.
-      if (clustersWithSolution.size > 0 && a.cluster && !clustersWithSolution.has(a.cluster)) return false;
+      if (clustersWithSolution.size > 0 && (!a.cluster || !clustersWithSolution.has(a.cluster))) return false;
       return true;
     });
 
