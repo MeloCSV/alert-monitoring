@@ -20,7 +20,9 @@ class PrometheusMapper:
         return [self._map_default_rule(rule) for rule in rules if self._is_default(rule)]
 
     def _is_default(self, rule: PrometheusRule) -> bool:
-        return str(rule.labels.get("alertype", "")).lower() == "default"
+        is_alertype_default = str(rule.labels.get("alertype", "")).lower() == "default"
+        is_manual = str(rule.labels.get("type", "")).upper() == "MANUAL"
+        return is_alertype_default and not is_manual
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
