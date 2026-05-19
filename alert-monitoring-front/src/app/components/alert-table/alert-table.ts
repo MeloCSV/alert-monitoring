@@ -87,9 +87,7 @@ export class AlertTableComponent implements OnInit {
   private computeBlackoutInfo(alert: Alert): BlackoutInfo {
     const isDefault = alert.alert_type === 'Por Defecto';
     const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
-    const namespaceValue = isDefault
-      ? (this.solutionName || '').toLowerCase()
-      : (alert.microservice || '').toLowerCase();
+    const namespaceValue = (alert.microservice || alert.solution || '').toLowerCase();
     const labelGetters: Record<string, () => string> = {
       alertname: () => alert.name,
       severity:  () => (alert.severity || '').toLowerCase(),
