@@ -45,7 +45,7 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
 
     def get_all(self, name: Optional[str] = None, csw_code: Optional[str] = None) -> List[CatalogApp]:
         self.logger.info(f"Consultando catálogo name={name} csw_code={csw_code}")
-        query = self.sqlalchemy_repository.query(CatalogAppDB)
+        query = self.sqlalchemy_repository.query(CatalogAppDB).filter(CatalogAppDB.platform.isnot(None))
 
         if name:
             query = query.filter(CatalogAppDB.name.ilike(f"%{name}%"))
