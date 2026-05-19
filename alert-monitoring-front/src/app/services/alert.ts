@@ -2,6 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface CatalogApp {
+  object_id: string;
+  object_key: string;
+  name: string;
+  csw_code: string | null;
+  platform: string | null;
+}
+
 export interface Alert {
   name: string;
   description: string;
@@ -50,6 +58,7 @@ export interface Blackout {
 @Injectable({ providedIn: 'root' })
 export class AlertService {
   private readonly apiUrl = 'http://localhost:8080/alerts';
+  private readonly catalogUrl = 'http://localhost:8080/catalog';
 
   constructor(private http: HttpClient) {}
 
@@ -63,5 +72,9 @@ export class AlertService {
 
   getBlackouts(): Observable<Blackout[]> {
     return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`);
+  }
+
+  getCatalogApps(): Observable<CatalogApp[]> {
+    return this.http.get<CatalogApp[]>(this.catalogUrl);
   }
 }
