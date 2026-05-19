@@ -52,4 +52,4 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
         if csw_code:
             query = query.filter(CatalogAppDB.csw_code.ilike(f"%{csw_code}%"))
 
-        return self.catalog_app_db_mapper.to_domain_list(query.all())
+        return self.catalog_app_db_mapper.to_domain_list(query.order_by(CatalogAppDB.name).all())
