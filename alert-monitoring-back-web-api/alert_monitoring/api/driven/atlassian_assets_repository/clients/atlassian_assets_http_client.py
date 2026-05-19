@@ -1,3 +1,4 @@
+import base64
 import logging
 from typing import List
 
@@ -17,8 +18,9 @@ class AtlassianAssetsHttpClient:
 
     def fetch_catalog_objects(self, config: AtlassianAssetsConfig) -> List[dict]:
         url = f"{config.base_url.rstrip('/')}/workspace/{config.workspace_id}/v1/object/aql"
+        credentials = base64.b64encode(f"{config.email}:{config.token}".encode()).decode()
         headers = {
-            "Authorization": f"Bearer {config.token}",
+            "Authorization": f"Basic {credentials}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
