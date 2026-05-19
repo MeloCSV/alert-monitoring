@@ -13,3 +13,4 @@ class AlertResponse(BaseModel):
     notification_channel: Optional[str] = None
     alert_type: str = "Ad-hoc"
     cluster: Optional[str] = None
+    prometheus_name: Optional[str] = None

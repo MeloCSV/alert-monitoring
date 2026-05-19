@@ -18,3 +18,4 @@ class AlertDB(SQLModel, table=True):
     notification_channel: Optional[str] = None
     alert_type: str = Field(default="Ad-hoc")
     cluster: Optional[str] = None
+    prometheus_name: Optional[str] = None
