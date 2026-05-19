@@ -17,3 +17,4 @@ class Alert(BaseModel):
         description="Indica si es un alertado por defecto o Ad-hoc"
     )
     cluster: Optional[str] = Field(None, description="Cluster K8S de origen (nombre del cluster)")
+    prometheus_name: Optional[str] = Field(None, description="Nombre técnico original de Prometheus (solo alertas Por Defecto)")

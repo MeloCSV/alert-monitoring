@@ -22,6 +22,7 @@ export interface Alert {
   notification_channel: string | null;
   alert_type: 'Por Defecto' | 'Ad-hoc';
   cluster: string | null;
+  prometheus_name: string | null;
   is_overridden?: boolean;
   is_partial?: boolean;
   is_blackout?: boolean;

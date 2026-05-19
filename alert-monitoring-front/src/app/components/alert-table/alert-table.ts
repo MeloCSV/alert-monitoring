@@ -89,7 +89,7 @@ export class AlertTableComponent implements OnInit {
     const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
     const namespaceValue = (alert.microservice || alert.solution || '').toLowerCase();
     const labelGetters: Record<string, () => string> = {
-      alertname: () => alert.name,
+      alertname: () => alert.prometheus_name || alert.name,
       severity:  () => (alert.severity || '').toLowerCase(),
       solucion:  () => (alert.solution || '').toLowerCase(),
       solution:  () => (alert.solution || '').toLowerCase(),
