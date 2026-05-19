@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
@@ -6,6 +6,7 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
+from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
 from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
@@ -24,9 +25,16 @@ from alert_monitoring.api.domain.models.blackout import Blackout
 class AlertService(AlertServicePort):
 
     @inject(logger="LoggerSetup.get_logger")
-    def __init__(self, alert_repository: AlertRepositoryPort, alert_override_repository: AlertOverrideRepositoryPort, logger: LoggerSetup):
+    def __init__(
+        self,
+        alert_repository: AlertRepositoryPort,
+        alert_override_repository: AlertOverrideRepositoryPort,
+        catalog_app_repository: CatalogAppRepositoryPort,
+        logger: LoggerSetup,
+    ):
         self.alert_repository = alert_repository
         self.override_repository = alert_override_repository
+        self.catalog_app_repository = catalog_app_repository
         self.save_use_case = SaveAlertsUseCase(alert_repository)
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
         self.recompute_overrides_use_case = RecomputeOverridesUseCase(alert_repository, alert_override_repository)
@@ -38,10 +46,27 @@ class AlertService(AlertServicePort):
         self.alertmanager_adapter = AlertManagerAdapter()
         self.logger = logger
 
+    def _build_catalog_lookup(self) -> Dict[str, str]:
+        """Returns a case-insensitive lookup: lowercase name -> canonical catalog name."""
+        return {app.name.lower(): app.name for app in self.catalog_app_repository.get_all()}
+
+    def _normalize_solutions(self, alerts: List[Alert], catalog_lookup: Dict[str, str]) -> List[Alert]:
+        for alert in alerts:
+            if not alert.solution:
+                continue
+            canonical = catalog_lookup.get(alert.solution.lower())
+            if canonical:
+                alert.solution = canonical
+            else:
+                self.logger.warning(f"solution '{alert.solution}' not found in catalog")
+        return alerts
+
     def sync_prometheus_alerts(self) -> int:
         self.logger.info('sync_prometheus_alerts')
         rules = self.prometheus_adapter.fetch_rules()
         alerts = self.prometheus_mapper.to_domain(rules)
+        catalog_lookup = self._build_catalog_lookup()
+        self._normalize_solutions(alerts, catalog_lookup)
         self.save_use_case.execute(alerts)
         self.recompute_overrides_use_case.execute()
         return len(alerts)
@@ -51,6 +76,8 @@ class AlertService(AlertServicePort):
         raw_rules = self.kibana_adapter.fetch_rules()
         rules = self.elastic_adapter.parse_rules(raw_rules)
         alerts = self.elastic_mapper.to_domain(rules)
+        catalog_lookup = self._build_catalog_lookup()
+        self._normalize_solutions(alerts, catalog_lookup)
         self.save_use_case.execute(alerts)
         self.recompute_overrides_use_case.execute()
         return len(alerts)
