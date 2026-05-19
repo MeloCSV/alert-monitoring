@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, CatalogApp } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -31,6 +31,7 @@ export class AlertTableComponent implements OnInit {
   alerts: Alert[] = [];
   overrides: AlertOverride[] = [];
   blackouts: Blackout[] = [];
+  catalogApps: CatalogApp[] = [];
   loading = true;
   error = false;
 
@@ -50,12 +51,14 @@ export class AlertTableComponent implements OnInit {
       alerts: this.alertService.getAlerts(),
       overrides: this.alertService.getOverrides(),
       blackouts: this.alertService.getBlackouts(),
+      catalogApps: this.alertService.getCatalogApps(),
     }).subscribe({
-      next: ({ alerts, overrides, blackouts }) => {
+      next: ({ alerts, overrides, blackouts, catalogApps }) => {
         this.alerts = alerts;
         this.overrides = overrides;
         this.blackouts = blackouts;
-        this.solutionOptions = this.uniqueValues(alerts.map(a => a.solution));
+        this.catalogApps = catalogApps;
+        this.solutionOptions = catalogApps.map(a => a.name);
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -84,9 +87,7 @@ export class AlertTableComponent implements OnInit {
   private computeBlackoutInfo(alert: Alert): BlackoutInfo {
     const isDefault = alert.alert_type === 'Por Defecto';
     const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
-    const namespaceValue = isDefault
-      ? (this.solutionName || '').toLowerCase()
-      : (alert.microservice || '').toLowerCase();
+    const namespaceValue = (alert.microservice || alert.solution || '').toLowerCase();
     const labelGetters: Record<string, () => string> = {
       alertname: () => alert.name,
       severity:  () => (alert.severity || '').toLowerCase(),
