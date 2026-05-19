@@ -103,6 +103,7 @@
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
+                          <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           @if (alert.is_overridden) {
                             <span class="overridden-tag">Deshabilitada</span>
                           } @else if (alert.is_partial) {
@@ -159,6 +160,7 @@
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
+                          <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           @if (alert.is_blackout) {
                             <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
                           } @else if (alert.is_partial_blackout) {
