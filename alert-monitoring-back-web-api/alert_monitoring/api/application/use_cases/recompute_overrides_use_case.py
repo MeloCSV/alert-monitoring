@@ -139,7 +139,7 @@ def _display_pattern(alternative: str) -> str:
 def _regex_matches(value: str, pattern: str) -> bool:
     try:
         import re
-        return re.fullmatch(f"(?:{pattern})", value) is not None
+        return re.fullmatch(f"(?:{pattern})", value, re.IGNORECASE) is not None
     except re.error:
         return False
 
@@ -163,6 +163,6 @@ def _literal_prefix(alternative: str) -> str:
 def _is_prefix_of(target: str, alternative: str) -> bool:
     if not target:
         return False
-    lit = _literal_prefix(alternative)
-    prefix = f"{target}-"
+    lit = _literal_prefix(alternative).lower()
+    prefix = f"{target.lower()}-"
     return lit.startswith(prefix)
