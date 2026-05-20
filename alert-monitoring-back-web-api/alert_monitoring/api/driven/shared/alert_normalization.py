@@ -6,6 +6,10 @@ ALL_ENVIRONMENTS: Tuple[str, ...] = ("dev", "itg", "pre", "pro")
 NAMESPACE_LABEL_KEYS: Tuple[str, ...] = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
 JOB_LABEL_KEYS: Tuple[str, ...] = ("job_name", "deployment", "horizontalpodautoscaler")
 
+# Lookup de traducción: raw_name → (display_name, display_description).
+# NO es la fuente de verdad de qué alertas existen; eso lo son las Prometheus rules.
+# Si un raw_name nuevo aparece en Prometheus y no está aquí, se mostrará el raw_name en la UI
+# hasta que alguien añada la traducción correspondiente.
 DEFAULT_ALERT_DISPLAY: Dict[str, Tuple[str, str]] = {
     "Default_Service_Status_KO": (
         "Servicio sin réplicas activas",

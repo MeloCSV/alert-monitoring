@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import List
 
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 
@@ -11,14 +11,13 @@ class DefaultAlertRepositoryPort(ABC):
         pass
 
     @abstractmethod
-    def replace_exclusions(self, updates: Dict[str, Tuple[List[str], List[str], List[str]]]) -> None:
-        """Replace exclusion patterns for all default alerts in one transaction.
+    def upsert_batch(self, alerts: List[DefaultAlert]) -> None:
+        """Upsert a batch of default alerts from Prometheus sync.
 
-        Args:
-            updates: mapping raw_name → (excluded_namespaces, included_namespaces, excluded_jobs)
+        For each alert:
+        - If raw_name is new: INSERT all fields.
+        - If raw_name exists: UPDATE raw_description, excluded_*, included_*,
+          severity and notification_channel. Only update display_name and
+          display_description when they are currently NULL (preserves manual edits).
         """
-        pass
-
-    @abstractmethod
-    def update_raw_description(self, raw_name: str, raw_description: str) -> None:
         pass
