@@ -5,6 +5,21 @@
       <p class="subtitle">Selecciona tu aplicación para ver todo el alarmado asociado.</p>
     </header>
 
+    <div class="severity-legend">
+      <span class="legend-title">Leyenda de severidad</span>
+      <div class="legend-item">
+        <span class="severity-tag severity-critical">critical</span>
+        <span class="legend-desc">Los operadores llamarán a cualquier hora</span>
+      </div>
+      <div class="legend-item">
+        <span class="severity-tag severity-principal">principal</span>
+        <span class="legend-desc">Los operadores llamarán en horario laboral</span>
+      </div>
+      <div class="legend-item">
+        <span class="severity-tag severity-warning">warning</span>
+      </div>
+    </div>
+
     <section class="filters">
       <div class="filters-mandatory">
         <div class="filter solution-filter">
@@ -49,6 +64,16 @@
               @for (ch of channelOptions; track ch) {
                 <option [value]="ch">{{ ch }}</option>
               }
+            </select>
+          </div>
+
+          <div class="filter">
+            <label>Severidad</label>
+            <select [(ngModel)]="severity" class="select">
+              <option value="">Todas las severidades</option>
+              <option value="critical">Critical</option>
+              <option value="principal">Principal</option>
+              <option value="warning">Warning</option>
             </select>
           </div>
 

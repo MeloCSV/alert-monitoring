@@ -5,6 +5,7 @@ import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, CatalogA
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
+type SeverityFilter = '' | 'warning' | 'principal' | 'critical';
 
 interface OverrideStatus {
   state: 'disabled' | 'partial' | 'active';
@@ -55,6 +56,7 @@ export class AlertTableComponent implements OnInit {
 
   environment: EnvironmentFilter = '';
   channel = '';
+  severity: SeverityFilter = '';
 
   showOptionalFilters = false;
 
@@ -245,11 +247,13 @@ export class AlertTableComponent implements OnInit {
   private passesCommonFilters(alert: Alert): boolean {
     if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
     if (this.channel && (alert.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    if (this.severity && (alert.severity || '').toLowerCase() !== this.severity) return false;
     return true;
   }
 
-  private passesDefaultChannelFilter(d: DefaultAlert): boolean {
+  private passesDefaultFilters(d: DefaultAlert): boolean {
     if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    if (this.severity && (d.severity || '').toLowerCase() !== this.severity) return false;
     return true;
   }
 
@@ -260,7 +264,7 @@ export class AlertTableComponent implements OnInit {
     const solution = this.solutionName;
 
     return this.canonicalDefaults
-      .filter(d => this.passesDefaultChannelFilter(d))
+      .filter(d => this.passesDefaultFilters(d))
       .map(d => {
         const status = overrideStatus.get(d.raw_name) ?? { state: 'active' as const, excluded: [] };
         const blackoutInfo = this.computeBlackoutInfoForDefault(d, solution);
@@ -368,6 +372,7 @@ export class AlertTableComponent implements OnInit {
   clearOptionalFilters(): void {
     this.environment = '';
     this.channel = '';
+    this.severity = '';
   }
 
   environmentsLabel(envs: string[]): string {
