@@ -3,6 +3,9 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 ALL_ENVIRONMENTS: Tuple[str, ...] = ("dev", "itg", "pre", "pro")
 
+NAMESPACE_LABEL_KEYS: Tuple[str, ...] = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
+JOB_LABEL_KEYS: Tuple[str, ...] = ("job_name", "deployment", "horizontalpodautoscaler")
+
 DEFAULT_ALERT_DISPLAY: Dict[str, Tuple[str, str]] = {
     "Default_Service_Status_KO": (
         "Servicio sin réplicas activas",
@@ -113,3 +116,25 @@ def detect_environments(texts: Iterable[Optional[str]]) -> List[str]:
 
 def environments_or_all(envs: List[str]) -> List[str]:
     return envs if envs else list(ALL_ENVIRONMENTS)
+
+
+def extract_label_alternatives(expr: Optional[str], keys: Iterable[str], exclude: bool) -> List[str]:
+    """Extract the alternatives from a PromQL selector for the given label keys.
+
+    Args:
+        expr: PromQL expression string.
+        keys: Label names to look for (e.g. ``namespace``, ``job_name``).
+        exclude: If True look for ``!~`` selectors; if False look for ``=~``.
+    """
+    if not expr:
+        return []
+    operator = "!~" if exclude else "=~"
+    alternatives: List[str] = []
+    for key in keys:
+        regex = rf'{key}\s*{re.escape(operator)}\s*"([^"]+)"'
+        for match in re.findall(regex, expr):
+            for part in match.split("|"):
+                part = part.strip()
+                if part and part not in alternatives:
+                    alternatives.append(part)
+    return alternatives

@@ -91,7 +91,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @for (alert of defaultAlerts; track alert.name) {
+                    @for (alert of defaultAlerts; track alert.raw_name) {
                       <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial" [class.blackout]="alert.is_blackout">
                         <td>
                           <div class="alert-name">
@@ -121,7 +121,7 @@
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
-                        <td>{{ environmentsLabel(alert) }}</td>
+                        <td>{{ environmentsLabel(alert.environments) }}</td>
                       </tr>
                     }
                   </tbody>
@@ -175,7 +175,7 @@
                           }
                         </td>
                         <td>{{ alert.notification_channel || '-' }}</td>
-                        <td>{{ environmentsLabel(alert) }}</td>
+                        <td>{{ environmentsLabel(alert.environments) }}</td>
                       </tr>
                     }
                   </tbody>

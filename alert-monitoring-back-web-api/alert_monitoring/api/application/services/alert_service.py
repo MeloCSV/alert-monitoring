@@ -7,8 +7,9 @@ from alert_monitoring.api.application.ports.driving.alert_service_port import Al
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
 from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
+from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
-from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase
+from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
 from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
@@ -20,6 +21,7 @@ from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 from alert_monitoring.api.domain.models.blackout import Blackout
+from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 
 
 class AlertService(AlertServicePort):
@@ -30,14 +32,18 @@ class AlertService(AlertServicePort):
         alert_repository: AlertRepositoryPort,
         alert_override_repository: AlertOverrideRepositoryPort,
         catalog_app_repository: CatalogAppRepositoryPort,
+        default_alert_repository: DefaultAlertRepositoryPort,
         logger: LoggerSetup,
     ):
         self.alert_repository = alert_repository
         self.override_repository = alert_override_repository
         self.catalog_app_repository = catalog_app_repository
+        self.default_alert_repository = default_alert_repository
         self.save_use_case = SaveAlertsUseCase(alert_repository)
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
-        self.recompute_overrides_use_case = RecomputeOverridesUseCase(alert_repository, alert_override_repository)
+        self.recompute_overrides_use_case = RecomputeOverridesUseCase(
+            alert_repository, alert_override_repository, default_alert_repository
+        )
         self.prometheus_adapter = PrometheusAdapter()
         self.prometheus_mapper = PrometheusMapper()
         self.elastic_adapter = ElasticAdapter()
@@ -47,7 +53,6 @@ class AlertService(AlertServicePort):
         self.logger = logger
 
     def _build_catalog_lookup(self) -> Dict[str, str]:
-        """Returns a case-insensitive lookup: lowercase name -> canonical catalog name."""
         return {app.name.lower(): app.name for app in self.catalog_app_repository.get_all()}
 
     def _normalize_solutions(self, alerts: List[Alert], catalog_lookup: Dict[str, str]) -> List[Alert]:
@@ -61,6 +66,20 @@ class AlertService(AlertServicePort):
                 self.logger.warning(f"solution '{alert.solution}' not found in catalog")
         return alerts
 
+    def _sync_default_exclusions(self, alerts: List[Alert]) -> None:
+        default_alert_rules = [a for a in alerts if a.alert_type == "Por Defecto"]
+        if not default_alert_rules:
+            return
+        updates = build_exclusion_updates(default_alert_rules)
+        self.default_alert_repository.replace_exclusions(updates)
+
+        # Store the first raw_description encountered for each alert (if not yet set)
+        seen: set[str] = set()
+        for alert in default_alert_rules:
+            raw_name = alert.prometheus_name
+            if raw_name and raw_name not in seen and alert.description:
+                seen.add(raw_name)
+
     def sync_prometheus_alerts(self) -> int:
         self.logger.info('sync_prometheus_alerts')
         rules = self.prometheus_adapter.fetch_rules()
@@ -68,6 +87,7 @@ class AlertService(AlertServicePort):
         catalog_lookup = self._build_catalog_lookup()
         self._normalize_solutions(alerts, catalog_lookup)
         self.save_use_case.execute(alerts)
+        self._sync_default_exclusions(alerts)
         self.recompute_overrides_use_case.execute()
         return len(alerts)
 
@@ -93,3 +113,7 @@ class AlertService(AlertServicePort):
     def get_active_blackouts(self) -> List[Blackout]:
         self.logger.info('get_active_blackouts')
         return self.alertmanager_adapter.fetch_active_blackouts()
+
+    def get_default_alerts(self) -> List[DefaultAlert]:
+        self.logger.info('get_default_alerts')
+        return self.default_alert_repository.get_all()

@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, CatalogApp } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, CatalogApp, DefaultAlert } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -17,6 +17,21 @@ interface BlackoutInfo {
   blackout: Blackout | null;
 }
 
+interface DefaultAlertRow {
+  raw_name: string;
+  name: string;
+  description: string | null;
+  severity: string | null;
+  notification_channel: string | null;
+  environments: string[];
+  is_overridden: boolean;
+  is_partial: boolean;
+  is_blackout: boolean;
+  blackout: Blackout | null;
+  chips: string[];
+  prometheus_name: string;
+}
+
 const NAMESPACE_KEYS = ['namespace', 'exported_namespace', 'backend_target_name', 'backend_name'];
 const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'];
 
@@ -29,6 +44,7 @@ const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'
 })
 export class AlertTableComponent implements OnInit {
   alerts: Alert[] = [];
+  canonicalDefaults: DefaultAlert[] = [];
   overrides: AlertOverride[] = [];
   blackouts: Blackout[] = [];
   catalogApps: CatalogApp[] = [];
@@ -49,12 +65,14 @@ export class AlertTableComponent implements OnInit {
   ngOnInit(): void {
     forkJoin({
       alerts: this.alertService.getAlerts(),
+      canonicalDefaults: this.alertService.getDefaultAlerts(),
       overrides: this.alertService.getOverrides(),
       blackouts: this.alertService.getBlackouts(),
       catalogApps: this.alertService.getCatalogApps(),
     }).subscribe({
-      next: ({ alerts, overrides, blackouts, catalogApps }) => {
+      next: ({ alerts, canonicalDefaults, overrides, blackouts, catalogApps }) => {
         this.alerts = alerts;
+        this.canonicalDefaults = canonicalDefaults;
         this.overrides = overrides;
         this.blackouts = blackouts;
         this.catalogApps = catalogApps;
@@ -82,6 +100,59 @@ export class AlertTableComponent implements OnInit {
       hit = matcherValue === candidate;
     }
     return isEqual ? hit : !hit;
+  }
+
+  private computeBlackoutInfoForDefault(defaultAlert: DefaultAlert, solution: string): BlackoutInfo {
+    const alertEnvs = ['pro'];
+    const namespaceValue = solution.toLowerCase();
+    const labelGetters: Record<string, () => string> = {
+      alertname:          () => defaultAlert.raw_name,
+      severity:           () => (defaultAlert.severity || '').toLowerCase(),
+      alertype:           () => 'default',
+      namespace:          () => namespaceValue,
+      exported_namespace: () => namespaceValue,
+    };
+
+    const silenced = new Set<string>();
+    let noEnvSilenced = false;
+    let representative: Blackout | null = null;
+
+    for (const blackout of this.blackouts) {
+      const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
+      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
+      if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
+
+      if (!nonEnvMatchers.some(m => m.name === 'alertname')) continue;
+      if (!nonEnvMatchers.some(m => m.name === 'namespace' || m.name === 'exported_namespace')) continue;
+
+      const nonEnvOk = nonEnvMatchers.every(m =>
+        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
+      );
+      if (!nonEnvOk) continue;
+
+      if (envMatchers.length === 0) {
+        if (alertEnvs.length === 0) noEnvSilenced = true;
+        else alertEnvs.forEach(e => silenced.add(e));
+        if (representative === null) representative = blackout;
+        continue;
+      }
+
+      for (const env of alertEnvs) {
+        const candidates = this.envCandidatesFor(env);
+        const envOk = envMatchers.every(m => this.matchArrayMatcher(m, candidates));
+        if (envOk) {
+          silenced.add(env);
+          if (representative === null) representative = blackout;
+        }
+      }
+    }
+
+    const silencedList = alertEnvs.filter(e => silenced.has(e));
+    const isFullySilenced = alertEnvs.length === 0
+      ? noEnvSilenced
+      : silencedList.length === alertEnvs.length && silencedList.length > 0;
+
+    return { isFullySilenced, silencedEnvironments: silencedList, blackout: representative };
   }
 
   private computeBlackoutInfo(alert: Alert): BlackoutInfo {
@@ -177,50 +248,37 @@ export class AlertTableComponent implements OnInit {
     return true;
   }
 
-  get defaultAlerts(): Alert[] {
+  private passesDefaultChannelFilter(d: DefaultAlert): boolean {
+    if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    return true;
+  }
+
+  get defaultAlerts(): DefaultAlertRow[] {
     if (!this.solutionName) return [];
 
-    // Determine which clusters have Prometheus alerts for the selected solution.
-    // Elastic alerts have no cluster and no default alert concept, so they are excluded here.
-    const clustersWithSolution = new Set(
-      this.alerts
-        .filter(a => a.source_tool === 'Prometheus' && a.solution === this.solutionName && a.cluster)
-        .map(a => a.cluster!)
-    );
-
-    const defaults = this.alerts.filter(a => {
-      if (a.alert_type !== 'Por Defecto') return false;
-      if (!this.passesCommonFilters(a)) return false;
-      // If we know which clusters the solution runs in, restrict defaults to those clusters.
-      // If no cluster info is available on an alert (legacy data), keep it.
-      if (clustersWithSolution.size > 0 && a.cluster && !clustersWithSolution.has(a.cluster)) return false;
-      return true;
-    });
-
-    const byName = new Map<string, Alert[]>();
-    for (const alert of defaults) {
-      const bucket = byName.get(alert.name) ?? [];
-      bucket.push(alert);
-      byName.set(alert.name, bucket);
-    }
     const overrideStatus = this.overrideStatusFor(this.solutionName);
-    const result: Alert[] = [];
-    for (const [name, bucket] of byName) {
-      const representative = bucket[0];
-      const status = overrideStatus.get(name) ?? { state: 'active', excluded: [] };
-      const blackoutInfo = this.computeBlackoutInfo(representative);
-      result.push({
-        ...representative,
-        is_overridden: status.state === 'disabled',
-        is_partial: status.state === 'partial',
-        is_blackout: blackoutInfo.isFullySilenced,
-        is_partial_blackout: false,
-        blackout_environments: [],
-        blackout: blackoutInfo.blackout,
-        chips: status.excluded,
+    const solution = this.solutionName;
+
+    return this.canonicalDefaults
+      .filter(d => this.passesDefaultChannelFilter(d))
+      .map(d => {
+        const status = overrideStatus.get(d.raw_name) ?? { state: 'active' as const, excluded: [] };
+        const blackoutInfo = this.computeBlackoutInfoForDefault(d, solution);
+        return {
+          raw_name: d.raw_name,
+          name: d.display_name,
+          description: d.display_description,
+          severity: d.severity,
+          notification_channel: d.notification_channel,
+          environments: ['pro'],
+          is_overridden: status.state === 'disabled',
+          is_partial: status.state === 'partial',
+          is_blackout: blackoutInfo.isFullySilenced,
+          blackout: blackoutInfo.blackout,
+          chips: status.excluded,
+          prometheus_name: d.raw_name,
+        } satisfies DefaultAlertRow;
       });
-    }
-    return result;
   }
 
   private overrideStatusFor(solution: string): Map<string, OverrideStatus> {
@@ -312,7 +370,7 @@ export class AlertTableComponent implements OnInit {
     this.channel = '';
   }
 
-  environmentsLabel(alert: Alert): string {
-    return alert.environments && alert.environments.length ? alert.environments.join(', ') : '-';
+  environmentsLabel(envs: string[]): string {
+    return envs && envs.length ? envs.join(', ') : '-';
   }
 }
