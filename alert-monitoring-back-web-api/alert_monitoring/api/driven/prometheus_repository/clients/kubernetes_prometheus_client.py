@@ -41,6 +41,7 @@ class KubernetesPrometheusClient:
 
     def _parse_item(self, item: dict) -> List[PrometheusRule]:
         spec = item.get("spec", {}) or {}
+        rule_file = (item.get("metadata") or {}).get("name", "")
         rules: List[PrometheusRule] = []
         for group in spec.get("groups", []) or []:
             group_name = group.get("name", "")
@@ -53,5 +54,6 @@ class KubernetesPrometheusClient:
                     labels=rule.get("labels", {}) or {},
                     annotations=rule.get("annotations", {}) or {},
                     group_name=group_name,
+                    rule_file=rule_file,
                 ))
         return rules
