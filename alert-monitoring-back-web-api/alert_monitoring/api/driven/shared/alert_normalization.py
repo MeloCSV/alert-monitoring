@@ -71,6 +71,22 @@ DEFAULT_ALERT_DISPLAY: Dict[str, Tuple[str, str]] = {
         "HPA en máximo de réplicas durante más de 1 hora",
         "El autoescalador horizontal (HPA) lleva más de 1 hora con el número máximo de réplicas activas. No puede escalar más y el sistema podría estar bajo una presión sostenida.",
     ),
+    "Default_PodCrashLoopingPrincipal": (
+        "Pod reiniciándose continuamente (principal)",
+        "Un pod del entorno principal del microservicio está en CrashLoopBackOff. Kubernetes lo está reiniciando repetidamente debido a fallos continuos.",
+    ),
+    "Default_PodCrashLoopingCritical": (
+        "Pod reiniciándose continuamente (crítico)",
+        "Un pod del entorno crítico del microservicio está en CrashLoopBackOff. Kubernetes lo está reiniciando repetidamente debido a fallos continuos.",
+    ),
+    "High_4xx_Http_Requests_Principal": (
+        "Alto porcentaje de errores HTTP 4xx (>5%)",
+        "Más del 5% de las peticiones HTTP están respondiendo con errores 4xx (p. ej. 404 Not Found, 401 Unauthorized). Puede indicar peticiones incorrectas o problemas de configuración.",
+    ),
+    "High_4xx_Http_Requests_Critical": (
+        "Porcentaje crítico de errores HTTP 4xx (>10%)",
+        "Más del 10% de las peticiones HTTP están respondiendo con errores 4xx. Nivel crítico de errores de cliente que requiere atención inmediata.",
+    ),
 }
 
 CANAL_DISPLAY_NAMES: Dict[str, str] = {
