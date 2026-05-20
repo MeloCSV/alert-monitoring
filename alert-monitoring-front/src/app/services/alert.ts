@@ -10,6 +10,18 @@ export interface CatalogApp {
   platform: string | null;
 }
 
+export interface DefaultAlert {
+  raw_name: string;
+  display_name: string;
+  raw_description: string | null;
+  display_description: string | null;
+  severity: string | null;
+  notification_channel: string | null;
+  excluded_namespaces: string[];
+  included_namespaces: string[];
+  excluded_jobs: string[];
+}
+
 export interface Alert {
   name: string;
   description: string;
@@ -77,5 +89,9 @@ export class AlertService {
 
   getCatalogApps(): Observable<CatalogApp[]> {
     return this.http.get<CatalogApp[]>(this.catalogUrl);
+  }
+
+  getDefaultAlerts(): Observable<DefaultAlert[]> {
+    return this.http.get<DefaultAlert[]>(`${this.apiUrl}/defaults`);
   }
 }

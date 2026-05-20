@@ -5,7 +5,6 @@ from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.driven.shared.alert_normalization import (
     BOOL_CHANNEL_LABELS,
-    DEFAULT_ALERT_DISPLAY,
     display_canal,
     environments_or_all,
 )
@@ -20,9 +19,8 @@ class PrometheusMapper:
         is_default = str(labels.get("alertype", "")).lower() == "default"
 
         raw_name = rule.alert.split()[0] if rule.alert else rule.alert
-        display = DEFAULT_ALERT_DISPLAY.get(raw_name) if is_default else None
-        name = display[0] if display else rule.alert
-        description = display[1] if display else rule.annotations.get("message", "Sin descripción")
+        name = raw_name if is_default else rule.alert
+        description = rule.annotations.get("message", "Sin descripción")
 
         return Alert(
             name=name,

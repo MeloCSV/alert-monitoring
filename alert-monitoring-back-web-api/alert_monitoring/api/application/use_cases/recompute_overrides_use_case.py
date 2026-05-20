@@ -1,25 +1,31 @@
-import re
 from collections import defaultdict
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
-from alert_monitoring.api.domain.models.alert import Alert
+from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
-
-
-_NAMESPACE_LABEL_KEYS = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
-_JOB_LABEL_KEYS = ("job_name", "deployment", "horizontalpodautoscaler")
+from alert_monitoring.api.domain.models.default_alert import DefaultAlert
+from alert_monitoring.api.driven.shared.alert_normalization import (
+    NAMESPACE_LABEL_KEYS,
+    JOB_LABEL_KEYS,
+    extract_label_alternatives,
+)
 
 
 class RecomputeOverridesUseCase:
-    def __init__(self, alert_repository: AlertRepositoryPort, override_repository: AlertOverrideRepositoryPort):
+    def __init__(
+        self,
+        alert_repository: AlertRepositoryPort,
+        override_repository: AlertOverrideRepositoryPort,
+        default_alert_repository: DefaultAlertRepositoryPort,
+    ):
         self.alert_repository = alert_repository
         self.override_repository = override_repository
+        self.default_alert_repository = default_alert_repository
 
     def execute(self) -> int:
         alerts = self.alert_repository.get_all()
-        default_alerts = [a for a in alerts if a.alert_type == "Por Defecto"]
 
         # Build solution → set of microservices from Ad-hoc alerts
         solution_micros: dict[str, Set[str]] = defaultdict(set)
@@ -28,19 +34,15 @@ class RecomputeOverridesUseCase:
                 solution_micros[a.solution].add(a.microservice)
 
         solutions = sorted(solution_micros.keys())
-
-        # Group default alerts by name
-        buckets: dict[str, List[Alert]] = defaultdict(list)
-        for alert in default_alerts:
-            buckets[alert.name].append(alert)
+        default_alerts = self.default_alert_repository.get_all()
 
         overrides: List[AlertOverride] = []
-        for name, bucket in buckets.items():
+        for default_alert in default_alerts:
             for sol in solutions:
                 micros = solution_micros[sol]
-                is_disabled, is_partial, excluded_items = _evaluate(bucket, sol, micros)
+                is_disabled, is_partial, excluded_items = _evaluate(default_alert, sol, micros)
                 overrides.append(AlertOverride(
-                    alert_name=name,
+                    alert_name=default_alert.raw_name,
                     solution=sol,
                     is_disabled=is_disabled,
                     is_partial=is_partial,
@@ -51,59 +53,74 @@ class RecomputeOverridesUseCase:
         return len(overrides)
 
 
-def _evaluate(rules: Iterable[Alert], solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
+def _evaluate(default_alert: DefaultAlert, solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
     ns_fully_excluded = False
     ns_re_included = False
     partially_excluded = False
     excluded_items: List[str] = []
-    re_included_patterns: List[str] = []
 
     targets = {solution} | micros
 
-    for rule in rules:
-        ns_excl_alts = _extract_alternatives(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=True)
-        ns_incl_pattern = _extract_pattern(rule.condition, _NAMESPACE_LABEL_KEYS, exclude=False)
-        job_excl_alts = _extract_alternatives(rule.condition, _JOB_LABEL_KEYS, exclude=True)
+    for alt in default_alert.excluded_namespaces:
+        matched_target = False
+        for target in targets:
+            if _regex_matches(target, alt):
+                ns_fully_excluded = True
+                matched_target = True
+            elif _is_prefix_of(target, alt):
+                partially_excluded = True
+                matched_target = True
+        if matched_target:
+            _append_unique(excluded_items, _display_pattern(alt))
 
-        for alt in ns_excl_alts:
-            matched_target = False
-            for target in targets:
-                if _regex_matches(target, alt):
-                    ns_fully_excluded = True
-                    matched_target = True
-                elif _is_prefix_of(target, alt):
-                    partially_excluded = True
-                    matched_target = True
-            if matched_target:
-                _append_unique(excluded_items, _display_pattern(alt))
-
-        if ns_incl_pattern:
-            re_included_patterns.append(ns_incl_pattern)
-            for target in targets:
-                if _regex_matches(target, ns_incl_pattern):
-                    ns_re_included = True
-                    break
-
-        for alt in job_excl_alts:
-            matched_target = False
-            for target in targets:
-                if _is_prefix_of(target, alt):
-                    partially_excluded = True
-                    matched_target = True
-                    break
-            if matched_target:
-                _append_unique(excluded_items, _display_pattern(alt))
+    for incl in default_alert.included_namespaces:
+        for target in targets:
+            if _regex_matches(target, incl):
+                ns_re_included = True
+                break
 
     excluded_items = [
         item for item in excluded_items
-        if not any(_regex_matches(item, pat) for pat in re_included_patterns)
+        if not any(_regex_matches(item, incl) for incl in default_alert.included_namespaces)
     ]
+
+    for alt in default_alert.excluded_jobs:
+        matched_target = False
+        for target in targets:
+            if _is_prefix_of(target, alt):
+                partially_excluded = True
+                matched_target = True
+                break
+        if matched_target:
+            _append_unique(excluded_items, _display_pattern(alt))
 
     is_disabled = ns_fully_excluded and not ns_re_included
     is_partial = partially_excluded and not is_disabled
     if is_disabled:
         excluded_items = []
     return is_disabled, is_partial, excluded_items
+
+
+def build_exclusion_updates(default_alert_rules) -> dict:
+    """Merge exclusion patterns from all default alert rule instances grouped by raw_name.
+
+    Returns a dict mapping raw_name → (excluded_namespaces, included_namespaces, excluded_jobs).
+    """
+    buckets: dict[str, dict] = defaultdict(lambda: {"excl_ns": set(), "incl_ns": set(), "excl_jobs": set()})
+
+    for alert in default_alert_rules:
+        raw_name = alert.prometheus_name
+        if not raw_name:
+            continue
+        bucket = buckets[raw_name]
+        bucket["excl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=True))
+        bucket["incl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=False))
+        bucket["excl_jobs"].update(extract_label_alternatives(alert.condition, JOB_LABEL_KEYS, exclude=True))
+
+    return {
+        raw_name: (sorted(b["excl_ns"]), sorted(b["incl_ns"]), sorted(b["excl_jobs"]))
+        for raw_name, b in buckets.items()
+    }
 
 
 def _append_unique(items: List[str], value: str) -> None:
@@ -119,35 +136,15 @@ def _display_pattern(alternative: str) -> str:
     return cleaned.rstrip("-").strip() or alternative
 
 
-def _extract_pattern(expr: Optional[str], keys: Iterable[str], exclude: bool) -> Optional[str]:
-    alts = _extract_alternatives(expr, keys, exclude)
-    return "|".join(alts) if alts else None
-
-
-def _extract_alternatives(expr: Optional[str], keys: Iterable[str], exclude: bool) -> List[str]:
-    if not expr:
-        return []
-    operator = "!~" if exclude else "=~"
-    alternatives: list[str] = []
-    for key in keys:
-        regex = rf'{key}\s*{re.escape(operator)}\s*"([^"]+)"'
-        for match in re.findall(regex, expr):
-            for part in match.split("|"):
-                part = part.strip()
-                if part and part not in alternatives:
-                    alternatives.append(part)
-    return alternatives
-
-
 def _regex_matches(value: str, pattern: str) -> bool:
     try:
+        import re
         return re.fullmatch(f"(?:{pattern})", value) is not None
     except re.error:
         return False
 
 
 def _literal_prefix(alternative: str) -> str:
-    """Return the leading literal characters of a regex alternative (stops at first metachar)."""
     out: list[str] = []
     i = 0
     while i < len(alternative):
@@ -164,7 +161,6 @@ def _literal_prefix(alternative: str) -> str:
 
 
 def _is_prefix_of(target: str, alternative: str) -> bool:
-    """True when the literal prefix of `alternative` starts with `target-`."""
     if not target:
         return False
     lit = _literal_prefix(alternative)
