@@ -18,7 +18,7 @@ class PrometheusMapper:
         labels = rule.labels
         is_default = (
             str(labels.get("alertype", "")).lower() == "default"
-            and rule.rule_file.lower().startswith("default")
+            and rule.group_name.lower().startswith("default")
         )
         raw_name = rule.alert.split()[0] if rule.alert else rule.alert
         name = raw_name if is_default else rule.alert
