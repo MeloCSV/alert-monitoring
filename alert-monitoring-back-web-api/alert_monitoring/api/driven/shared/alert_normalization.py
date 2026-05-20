@@ -137,8 +137,33 @@ def extract_label_alternatives(expr: Optional[str], keys: Iterable[str], exclude
     for key in keys:
         regex = rf'{key}\s*{re.escape(operator)}\s*"([^"]+)"'
         for match in re.findall(regex, expr):
-            for part in match.split("|"):
-                part = part.strip()
+            for part in _split_top_level_alternatives(match):
                 if part and part not in alternatives:
                     alternatives.append(part)
     return alternatives
+
+
+def _split_top_level_alternatives(pattern: str) -> List[str]:
+    """Split a regex alternation string on top-level '|' only (not inside parentheses)."""
+    parts: List[str] = []
+    depth = 0
+    current: List[str] = []
+    for ch in pattern:
+        if ch == "(":
+            depth += 1
+            current.append(ch)
+        elif ch == ")":
+            depth -= 1
+            current.append(ch)
+        elif ch == "|" and depth == 0:
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        part = "".join(current).strip()
+        if part:
+            parts.append(part)
+    return parts
