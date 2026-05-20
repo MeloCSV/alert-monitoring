@@ -93,7 +93,7 @@ class AlertService(AlertServicePort):
             translation = DEFAULT_ALERT_DISPLAY.get(raw_name)
             upsert_list.append(DefaultAlert(
                 raw_name=raw_name,
-                display_name=translation[0] if translation else None,
+                display_name=translation[0] if translation else raw_name,
                 raw_description=raw_descriptions.get(raw_name),
                 display_description=translation[1] if translation else None,
                 severity=first_severity.get(raw_name),
