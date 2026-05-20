@@ -10,3 +10,4 @@ class PrometheusRule:
     annotations: Dict[str, Any] = field(default_factory=dict)
     group_name: str = ""
     cluster_name: str = ""
+    rule_file: str = ""
