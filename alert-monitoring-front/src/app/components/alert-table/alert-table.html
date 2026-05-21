@@ -112,8 +112,8 @@
                   <thead>
                     <tr>
                       <th>Alarma</th>
-                      <th>Severidad</th>
                       <th>Canal de salida</th>
+                      <th>Severidad</th>
                       <th>Entorno</th>
                     </tr>
                   </thead>
@@ -146,10 +146,10 @@
                             </div>
                           }
                         </td>
+                        <td>{{ alert.notification_channel || '-' }}</td>
                         <td class="severity-cell">
                           <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                         </td>
-                        <td>{{ alert.notification_channel || '-' }}</td>
                         <td>{{ environmentsLabel(alert.environments) }}</td>
                       </tr>
                     }
@@ -172,8 +172,8 @@
                   <thead>
                     <tr>
                       <th>Alarma</th>
-                      <th>Severidad</th>
                       <th>Canal de salida</th>
+                      <th>Severidad</th>
                       <th>Entorno</th>
                     </tr>
                   </thead>
@@ -203,10 +203,10 @@
                             </div>
                           }
                         </td>
+                        <td>{{ alert.notification_channel || '-' }}</td>
                         <td class="severity-cell">
                           <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                         </td>
-                        <td>{{ alert.notification_channel || '-' }}</td>
                         <td>{{ environmentsLabel(alert.environments) }}</td>
                       </tr>
                     }
