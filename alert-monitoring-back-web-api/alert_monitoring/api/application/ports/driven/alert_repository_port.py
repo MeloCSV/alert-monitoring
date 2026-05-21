@@ -10,5 +10,9 @@ class AlertRepositoryPort(ABC):
         pass
 
     @abstractmethod
+    def delete_by_source_tool(self, source_tool: str) -> None:
+        pass
+
+    @abstractmethod
     def get_all(self, filters:Optional[AlertFilter] = None) -> List[Alert]:
         pass
