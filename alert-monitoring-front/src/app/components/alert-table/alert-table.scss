@@ -374,9 +374,13 @@ tr.blackout {
   border-color: #b9dcc6;
 }
 
+.severity-cell {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .severity-tag {
   display: inline-block;
-  margin-top: 6px;
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
