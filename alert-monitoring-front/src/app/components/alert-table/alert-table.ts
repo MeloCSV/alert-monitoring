@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AlertService, Alert, AlertOverride, Blackout, BlackoutMatcher, CatalogApp, DefaultAlert } from '../../services/alert';
+import { AlertService, Alert, AlertOverride, Blackout, CatalogApp, DefaultAlert } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -10,12 +10,6 @@ type SeverityFilter = '' | 'warning' | 'principal' | 'critical';
 interface OverrideStatus {
   state: 'disabled' | 'partial' | 'active';
   excluded: string[];
-}
-
-interface BlackoutInfo {
-  isFullySilenced: boolean;
-  silencedEnvironments: string[];
-  blackout: Blackout | null;
 }
 
 interface DefaultAlertRow {
@@ -27,14 +21,16 @@ interface DefaultAlertRow {
   environments: string[];
   is_overridden: boolean;
   is_partial: boolean;
-  is_blackout: boolean;
-  blackout: Blackout | null;
   chips: string[];
   prometheus_name: string;
 }
 
 const NAMESPACE_KEYS = ['namespace', 'exported_namespace', 'backend_target_name', 'backend_name'];
 const JOB_KEYS = ['job_name', 'deployment', 'horizontalpodautoscaler', 'cronjob'];
+const APP_MATCHER_FIELDS = new Set([
+  'namespace', 'solucion', 'solution', 'exported_namespace',
+  'backend_target_name', 'deployment', 'replicaset', 'cronjob', 'pod'
+]);
 
 @Component({
   selector: 'app-alert-table',
@@ -59,6 +55,7 @@ export class AlertTableComponent implements OnInit {
   severity: SeverityFilter = '';
 
   showOptionalFilters = false;
+  showSilences = false;
 
   solutionOptions: string[] = [];
 
@@ -90,154 +87,37 @@ export class AlertTableComponent implements OnInit {
     });
   }
 
-  private matchesBlackoutValue(matcherValue: string, isRegex: boolean, isEqual: boolean, candidate: string): boolean {
-    let hit: boolean;
-    if (isRegex) {
-      try {
-        hit = new RegExp(`^(?:${matcherValue})$`).test(candidate);
-      } catch {
-        return false;
+  get applicationSilences(): Blackout[] {
+    if (!this.solutionName) return [];
+    const sol = this.solutionName.toLowerCase();
+    const variants = [sol, `${sol}-back`, `${sol}-front`];
+
+    return this.blackouts.filter(b => b.matchers.some(m => {
+      if (!APP_MATCHER_FIELDS.has(m.name) || !m.is_equal) return false;
+      if (m.is_regex) {
+        try {
+          const re = new RegExp(m.value);
+          return variants.some(v => re.test(v));
+        } catch { return false; }
       }
-    } else {
-      hit = matcherValue === candidate;
-    }
-    return isEqual ? hit : !hit;
+      const val = m.value.toLowerCase();
+      return variants.some(v => val === v || val.startsWith(`${v}-`));
+    }));
   }
 
-  private computeBlackoutInfoForDefault(defaultAlert: DefaultAlert, solution: string): BlackoutInfo {
-    const alertEnvs = ['pro'];
-    const namespaceValue = solution.toLowerCase();
-    const labelGetters: Record<string, () => string> = {
-      alertname:          () => defaultAlert.raw_name,
-      severity:           () => (defaultAlert.severity || '').toLowerCase(),
-      alertype:           () => 'default',
-      namespace:          () => namespaceValue,
-      exported_namespace: () => namespaceValue,
-    };
-
-    const silenced = new Set<string>();
-    let noEnvSilenced = false;
-    let representative: Blackout | null = null;
-
-    for (const blackout of this.blackouts) {
-      const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
-      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
-      if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
-      const unknownOk = blackout.matchers
-        .filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments')
-        .every(m => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, ''));
-      if (!unknownOk) continue;
-
-      const nonEnvOk = nonEnvMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
-      );
-      if (!nonEnvOk) continue;
-
-      if (envMatchers.length === 0) {
-        if (alertEnvs.length === 0) noEnvSilenced = true;
-        else alertEnvs.forEach(e => silenced.add(e));
-        if (representative === null) representative = blackout;
-        continue;
-      }
-
-      for (const env of alertEnvs) {
-        const candidates = this.envCandidatesFor(env);
-        const envOk = envMatchers.every(m => this.matchArrayMatcher(m, candidates));
-        if (envOk) {
-          silenced.add(env);
-          if (representative === null) representative = blackout;
-        }
-      }
-    }
-
-    const silencedList = alertEnvs.filter(e => silenced.has(e));
-    const isFullySilenced = alertEnvs.length === 0
-      ? noEnvSilenced
-      : silencedList.length === alertEnvs.length && silencedList.length > 0;
-
-    return { isFullySilenced, silencedEnvironments: silencedList, blackout: representative };
+  toggleSilences(): void {
+    this.showSilences = !this.showSilences;
   }
 
-  private computeBlackoutInfo(alert: Alert): BlackoutInfo {
-    const isDefault = alert.alert_type === 'Por Defecto';
-    const alertEnvs = (alert.environments || []).map(e => e.toLowerCase());
-    const namespaceValue = (alert.microservice || alert.solution || '').toLowerCase();
-    const labelGetters: Record<string, () => string> = {
-      alertname: () => alert.prometheus_name || alert.name,
-      severity:  () => (alert.severity || '').toLowerCase(),
-      solucion:  () => (alert.solution || '').toLowerCase(),
-      solution:  () => (alert.solution || '').toLowerCase(),
-      alertype:  () => isDefault ? 'default' : 'adhoc',
-      namespace: () => namespaceValue,
-      exported_namespace: () => namespaceValue,
-    };
-
-    const silenced = new Set<string>();
-    let noEnvSilenced = false;
-    let representative: Blackout | null = null;
-
-    for (const blackout of this.blackouts) {
-      const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
-      const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
-      if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
-      const unknownOk = blackout.matchers
-        .filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments')
-        .every(m => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, ''));
-      if (!unknownOk) continue;
-
-      const nonEnvOk = nonEnvMatchers.every(m =>
-        this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
-      );
-      if (!nonEnvOk) continue;
-
-      if (envMatchers.length === 0) {
-        if (alertEnvs.length === 0) noEnvSilenced = true;
-        else alertEnvs.forEach(e => silenced.add(e));
-        if (representative === null) representative = blackout;
-        continue;
-      }
-
-      for (const env of alertEnvs) {
-        const candidates = this.envCandidatesFor(env);
-        const envOk = envMatchers.every(m => this.matchArrayMatcher(m, candidates));
-        if (envOk) {
-          silenced.add(env);
-          if (representative === null) representative = blackout;
-        }
-      }
-    }
-
-    const silencedList = alertEnvs.filter(e => silenced.has(e));
-    const isFullySilenced = alertEnvs.length === 0
-      ? noEnvSilenced
-      : silencedList.length === alertEnvs.length && silencedList.length > 0;
-
-    return { isFullySilenced, silencedEnvironments: silencedList, blackout: representative };
-  }
-
-  private matchArrayMatcher(m: BlackoutMatcher, vals: string[]): boolean {
-    if (vals.length === 0) return false;
-    if (m.is_equal) {
-      return vals.some(v => this.matchesBlackoutValue(m.value, m.is_regex, true, v));
-    }
-    return vals.every(v => this.matchesBlackoutValue(m.value, m.is_regex, false, v));
-  }
-
-  private envCandidatesFor(env: string): string[] {
-    const e = env.toLowerCase();
-    return [e, `ocp-${e}`, `gcp-${e}`];
-  }
-
-  partialBlackoutLabel(alert: Alert): string {
-    const envs = alert.blackout_environments ?? [];
-    if (envs.length === 1) return `Silenciada en entorno: ${envs[0]}`;
-    return `Silenciada en entornos: ${envs.join(', ')}`;
-  }
-
-  formatBlackoutDate(isoDate: string | null | undefined): string {
+  formatSilenceDate(isoDate: string | null | undefined): string {
     if (!isoDate) return '';
     const d = new Date(isoDate);
     return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  matcherOperator(isRegex: boolean, isEqual: boolean): string {
+    if (isRegex) return isEqual ? '=~' : '!~';
+    return isEqual ? '=' : '!=';
   }
 
   private uniqueValues(values: (string | null | undefined)[]): string[] {
@@ -261,13 +141,11 @@ export class AlertTableComponent implements OnInit {
     if (!this.solutionName) return [];
 
     const overrideStatus = this.overrideStatusFor(this.solutionName);
-    const solution = this.solutionName;
 
     return this.canonicalDefaults
       .filter(d => this.passesDefaultFilters(d))
       .map(d => {
         const status = overrideStatus.get(d.raw_name) ?? { state: 'active' as const, excluded: [] };
-        const blackoutInfo = this.computeBlackoutInfoForDefault(d, solution);
         return {
           raw_name: d.raw_name,
           name: d.display_name,
@@ -277,8 +155,6 @@ export class AlertTableComponent implements OnInit {
           environments: ['pro'],
           is_overridden: status.state === 'disabled',
           is_partial: status.state === 'partial',
-          is_blackout: blackoutInfo.isFullySilenced,
-          blackout: blackoutInfo.blackout,
           chips: status.excluded,
           prometheus_name: d.raw_name,
         } satisfies DefaultAlertRow;
@@ -305,17 +181,10 @@ export class AlertTableComponent implements OnInit {
         if (alert.solution !== this.solutionName) return false;
         return this.passesCommonFilters(alert);
       })
-      .map(alert => {
-        const blackoutInfo = this.computeBlackoutInfo(alert);
-        return {
-          ...alert,
-          is_blackout: blackoutInfo.isFullySilenced,
-          is_partial_blackout: !blackoutInfo.isFullySilenced && blackoutInfo.silencedEnvironments.length > 0,
-          blackout_environments: blackoutInfo.silencedEnvironments,
-          blackout: blackoutInfo.blackout,
-          chips: this.adhocChips(alert),
-        };
-      });
+      .map(alert => ({
+        ...alert,
+        chips: this.adhocChips(alert),
+      }));
   }
 
   private adhocChips(alert: Alert): string[] {
@@ -362,6 +231,7 @@ export class AlertTableComponent implements OnInit {
   onSolutionChange(value: string): void {
     this.solutionName = value;
     this.channel = '';
+    this.showSilences = false;
     this.cdr.detectChanges();
   }
 

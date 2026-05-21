@@ -37,10 +37,6 @@ export interface Alert {
   prometheus_name: string | null;
   is_overridden?: boolean;
   is_partial?: boolean;
-  is_blackout?: boolean;
-  is_partial_blackout?: boolean;
-  blackout_environments?: string[];
-  blackout?: Blackout | null;
   chips?: string[];
 }
 
