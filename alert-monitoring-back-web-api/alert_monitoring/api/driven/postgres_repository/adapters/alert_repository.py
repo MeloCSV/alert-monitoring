@@ -26,6 +26,11 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
             self.sqlalchemy_repository.add(alert_db)
         self.sqlalchemy_repository.commit()
 
+    def delete_by_source_tool(self, source_tool: str) -> None:
+        deleted = self.sqlalchemy_repository.query(AlertDB).filter(AlertDB.source_tool == source_tool).delete()
+        self.logger.info(f"Eliminadas {deleted} alertas de source_tool='{source_tool}'")
+        self.sqlalchemy_repository.commit()
+
     def get_all(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
         self.logger.info(f"Consultando alertas con filtros: {filters}")
         query = self.sqlalchemy_repository.query(AlertDB)

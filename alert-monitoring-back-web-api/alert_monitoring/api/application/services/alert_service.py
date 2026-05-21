@@ -115,6 +115,7 @@ class AlertService(AlertServicePort):
         default_rules = [a for a in alerts if a.alert_type == "Por Defecto"]
         adhoc_alerts = [a for a in alerts if a.alert_type != "Por Defecto"]
 
+        self.alert_repository.delete_by_source_tool("Prometheus")
         self.save_use_case.execute(adhoc_alerts)
         self._upsert_default_alerts(default_rules)
         self.recompute_overrides_use_case.execute()
@@ -127,6 +128,7 @@ class AlertService(AlertServicePort):
         alerts = self.elastic_mapper.to_domain(rules)
         catalog_lookup = self._build_catalog_lookup()
         self._normalize_solutions(alerts, catalog_lookup)
+        self.alert_repository.delete_by_source_tool("Elastic")
         self.save_use_case.execute(alerts)
         self.recompute_overrides_use_case.execute()
         return len(alerts)
