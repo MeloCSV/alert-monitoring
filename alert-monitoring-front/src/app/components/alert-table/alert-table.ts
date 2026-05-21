@@ -122,12 +122,11 @@ export class AlertTableComponent implements OnInit {
     for (const blackout of this.blackouts) {
       const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
       const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
-      const unknownMatchers = blackout.matchers.filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments');
       if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
-      if (unknownMatchers.length > 0) continue;
-
-      if (!nonEnvMatchers.some(m => m.name === 'alertname')) continue;
-      if (!nonEnvMatchers.some(m => m.name === 'namespace' || m.name === 'exported_namespace')) continue;
+      const unknownOk = blackout.matchers
+        .filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments')
+        .every(m => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, ''));
+      if (!unknownOk) continue;
 
       const nonEnvOk = nonEnvMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
@@ -180,14 +179,11 @@ export class AlertTableComponent implements OnInit {
     for (const blackout of this.blackouts) {
       const nonEnvMatchers = blackout.matchers.filter(m => m.name in labelGetters);
       const envMatchers = blackout.matchers.filter(m => m.name === 'environment' || m.name === 'environments');
-      const unknownMatchers = blackout.matchers.filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments');
       if (nonEnvMatchers.length === 0 && envMatchers.length === 0) continue;
-      if (unknownMatchers.length > 0) continue;
-
-      if (isDefault) {
-        if (!nonEnvMatchers.some(m => m.name === 'alertname')) continue;
-        if (!nonEnvMatchers.some(m => m.name === 'namespace' || m.name === 'exported_namespace')) continue;
-      }
+      const unknownOk = blackout.matchers
+        .filter(m => !(m.name in labelGetters) && m.name !== 'environment' && m.name !== 'environments')
+        .every(m => this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, ''));
+      if (!unknownOk) continue;
 
       const nonEnvOk = nonEnvMatchers.every(m =>
         this.matchesBlackoutValue(m.value, m.is_regex, m.is_equal, labelGetters[m.name]())
