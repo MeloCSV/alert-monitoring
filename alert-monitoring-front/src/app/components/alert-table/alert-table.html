@@ -98,6 +98,43 @@
         </div>
       }
       @if (!loading && !error && hasSolutionSelected) {
+
+        @if (applicationSilences.length > 0) {
+          <div class="silences-section">
+            <button type="button" class="silences-toggle" (click)="toggleSilences()" [class.open]="showSilences">
+              <span class="chevron" aria-hidden="true">▾</span>
+              Silencios configurados en AlertManager
+              <span class="silence-count">{{ applicationSilences.length }}</span>
+            </button>
+            @if (showSilences) {
+              <div class="silences-list">
+                @for (silence of applicationSilences; track silence.id) {
+                  <div class="silence-card">
+                    <div class="silence-matchers">
+                      @for (m of silence.matchers; track m.name + m.value) {
+                        <span class="matcher-chip" [class.matcher-regex]="m.is_regex" [class.matcher-negation]="!m.is_equal">
+                          <span class="matcher-name">{{ m.name }}</span><span class="matcher-op">{{ matcherOperator(m.is_regex, m.is_equal) }}</span><span class="matcher-val">{{ m.value }}</span>
+                        </span>
+                      }
+                    </div>
+                    <div class="silence-meta">
+                      @if (silence.comment) {
+                        <p class="silence-comment" [title]="silence.comment">{{ silence.comment }}</p>
+                      }
+                      <div class="silence-footer">
+                        <span class="silence-until">Válido hasta <strong>{{ formatSilenceDate(silence.ends_at) }}</strong></span>
+                        @if (silence.created_by) {
+                          <span class="silence-author">{{ silence.created_by }}</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
         <div class="panels">
           <div class="panel">
             <div class="panel-header default-header">
@@ -119,14 +156,9 @@
                   </thead>
                   <tbody>
                     @for (alert of defaultAlerts; track alert.raw_name) {
-                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial" [class.blackout]="alert.is_blackout">
+                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial">
                         <td>
-                          <div class="alert-name">
-                            @if (alert.is_blackout) {
-                              <span class="blackout-icon" aria-label="Silenciada" title="Silenciada en AlertManager">⊘</span>
-                            }
-                            {{ alert.name }}
-                          </div>
+                          <div class="alert-name">{{ alert.name }}</div>
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
@@ -134,9 +166,6 @@
                             <span class="overridden-tag">Deshabilitada</span>
                           } @else if (alert.is_partial) {
                             <span class="partial-tag">Alarmado parcialmente</span>
-                          }
-                          @if (alert.is_blackout) {
-                            <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
                           }
                           @if (!alert.is_overridden && alert.chips && alert.chips.length) {
                             <div class="chip-list">
@@ -179,21 +208,11 @@
                   </thead>
                   <tbody>
                     @for (alert of adhocAlerts; track alert.name + '-' + alert.condition) {
-                      <tr [class.blackout]="alert.is_blackout">
+                      <tr>
                         <td>
-                          <div class="alert-name">
-                            @if (alert.is_blackout) {
-                              <span class="blackout-icon" aria-label="Silenciada" title="Silenciada en AlertManager">⊘</span>
-                            }
-                            {{ alert.name }}
-                          </div>
+                          <div class="alert-name">{{ alert.name }}</div>
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
-                          }
-                          @if (alert.is_blackout) {
-                            <span class="blackout-tag">Silenciada hasta {{ formatBlackoutDate(alert.blackout?.ends_at) }}</span>
-                          } @else if (alert.is_partial_blackout) {
-                            <span class="blackout-tag">{{ partialBlackoutLabel(alert) }}</span>
                           }
                           @if (alert.chips && alert.chips.length) {
                             <div class="chip-list">
