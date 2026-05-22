@@ -64,10 +64,27 @@ export interface Blackout {
   comment?: string | null;
 }
 
+export interface KibanaRule {
+  rule_id: string;
+  name: string;
+  enabled: boolean;
+  tags: string[];
+  schedule_interval: string | null;
+  severity: string | null;
+  notification_channels: string[];
+  apis: string[];
+  is_global: boolean;
+  last_execution_date: string | null;
+  last_execution_status: string | null;
+  kibana_url: string | null;
+  kibana_name: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AlertService {
   private readonly apiUrl = 'http://localhost:8080/alerts';
   private readonly catalogUrl = 'http://localhost:8080/catalog';
+  private readonly kibanaRulesUrl = 'http://localhost:8080/kibana-rules';
 
   constructor(private http: HttpClient) {}
 
@@ -89,5 +106,13 @@ export class AlertService {
 
   getDefaultAlerts(): Observable<DefaultAlert[]> {
     return this.http.get<DefaultAlert[]>(`${this.apiUrl}/defaults`);
+  }
+
+  getKibanaRuleApis(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.kibanaRulesUrl}/apis`);
+  }
+
+  getKibanaRules(): Observable<KibanaRule[]> {
+    return this.http.get<KibanaRule[]>(this.kibanaRulesUrl);
   }
 }
