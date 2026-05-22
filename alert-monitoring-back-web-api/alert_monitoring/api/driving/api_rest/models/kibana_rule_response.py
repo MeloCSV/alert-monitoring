@@ -17,3 +17,4 @@ class KibanaRuleResponse(BaseModel):
     last_execution_status: Optional[str]
     kibana_url: Optional[str]
     kibana_name: Optional[str]
+    message: Optional[str]

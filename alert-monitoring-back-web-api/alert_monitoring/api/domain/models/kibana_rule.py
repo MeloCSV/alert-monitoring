@@ -16,3 +16,4 @@ class KibanaRule(BaseModel):
     last_execution_status: Optional[str] = Field(None, description="Estado de la última ejecución")
     kibana_url: Optional[str] = Field(None, description="Enlace directo a la regla en Kibana")
     kibana_name: Optional[str] = Field(None, description="Nombre del Kibana del que proviene la regla")
+    message: Optional[str] = Field(None, description="Mensaje descriptivo de la regla (annotations.message)")

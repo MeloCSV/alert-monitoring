@@ -78,6 +78,7 @@ export interface KibanaRule {
   last_execution_status: string | null;
   kibana_url: string | null;
   kibana_name: string | null;
+  message: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
