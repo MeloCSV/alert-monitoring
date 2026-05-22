@@ -41,9 +41,7 @@
                   <thead>
                     <tr>
                       <th>Alarma</th>
-                      <th>Canal de salida</th>
                       <th>Severidad</th>
-                      <th>Entorno</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -55,19 +53,9 @@
                             <div class="alert-desc">{{ rule.message }}</div>
                           }
                         </td>
-                        <td>
-                          @if (rule.notification_channels.length) {
-                            <div class="chip-list">
-                              @for (ch of rule.notification_channels; track ch) {
-                                <span class="chip chip-channel">{{ ch }}</span>
-                              }
-                            </div>
-                          } @else { - }
-                        </td>
                         <td class="severity-cell">
                           <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
                         </td>
-                        <td>{{ rule.kibana_name || '-' }}</td>
                       </tr>
                     }
                   </tbody>
@@ -91,9 +79,7 @@
                   <thead>
                     <tr>
                       <th>Alarma</th>
-                      <th>Canal de salida</th>
                       <th>Severidad</th>
-                      <th>Entorno</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -105,19 +91,9 @@
                             <div class="alert-desc">{{ rule.message }}</div>
                           }
                         </td>
-                        <td>
-                          @if (rule.notification_channels.length) {
-                            <div class="chip-list">
-                              @for (ch of rule.notification_channels; track ch) {
-                                <span class="chip chip-channel">{{ ch }}</span>
-                              }
-                            </div>
-                          } @else { - }
-                        </td>
                         <td class="severity-cell">
                           <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
                         </td>
-                        <td>{{ rule.kibana_name || '-' }}</td>
                       </tr>
                     }
                   </tbody>
