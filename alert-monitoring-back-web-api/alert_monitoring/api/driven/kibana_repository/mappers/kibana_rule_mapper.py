@@ -8,17 +8,11 @@ from alert_monitoring.api.driven.kibana_repository.models.kibana_config import K
 logger = logging.getLogger(__name__)
 
 
-_API_FROM_KQL = re.compile(
+# Captura la posición de cada transactionElement.serviceName en el KQL
+_SERVICE_NAME_RE = re.compile(
     r"transactionElement\.serviceName\s*:\s*\"?([A-Za-z0-9_\-]+)\"?",
     re.IGNORECASE,
 )
-
-# Tags que son metadatos técnicos, no nombres de aplicación
-_META_TAGS = {
-    "alertmanager", "global", "blackout", "sap", "api-mngt", "api",
-    "infra", "timeout", "almacen", "warehouse", "test", "prueba",
-    "trabajadores-async",
-}
 
 _CONNECTOR_DISPLAY: Dict[str, str] = {
     ".webhook": "Webhook",
@@ -47,7 +41,7 @@ class KibanaRuleMapper:
         params = raw.get("params") or {}
         tags = [str(t) for t in (raw.get("tags") or []) if t]
 
-        apis = self._extract_apis(params, tags)
+        apis = self._extract_apis(params)
         is_global = not apis
 
         return KibanaRule(
@@ -66,24 +60,25 @@ class KibanaRuleMapper:
             kibana_name=config.name,
         )
 
-    def _extract_apis(self, params: dict, tags: List[str]) -> List[str]:
-        apis: List[str] = []
+    def _extract_apis(self, params: dict) -> List[str]:
+        """Extrae APIs con filtro positivo de transactionElement.serviceName en el KQL.
 
-        # Primero intentamos extraer del KQL (reglas de tráfico API)
+        Solo cuenta las ocurrencias NO negadas (sin NOT/! delante).
+        """
         search_config = params.get("searchConfiguration") or {}
         kql = (search_config.get("query") or {}).get("query") or ""
-        for match in _API_FROM_KQL.finditer(kql):
+        if not kql:
+            return []
+
+        apis: List[str] = []
+        for match in _SERVICE_NAME_RE.finditer(kql):
+            # Miramos los ~10 caracteres anteriores para detectar negación
+            prefix = kql[max(0, match.start() - 10): match.start()].upper()
+            if "NOT " in prefix or "!" in prefix:
+                continue
             value = match.group(1).strip()
             if value and value not in apis:
                 apis.append(value)
-
-        # Si el KQL no dio resultado, usamos los tags como agrupador
-        if not apis:
-            for tag in tags:
-                clean = tag.strip()
-                if clean and clean.lower() not in _META_TAGS and clean not in apis:
-                    apis.append(clean)
-
         return apis
 
     def _infer_severity(self, actions: List[dict]) -> Optional[str]:
