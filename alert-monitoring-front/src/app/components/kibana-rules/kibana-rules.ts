@@ -42,13 +42,13 @@ export class KibanaRulesComponent implements OnInit {
   }
 
   get globalRules(): KibanaRule[] {
-    return this.rules.filter(r => r.is_global);
+    return this.rules.filter(r => r.is_global && r.enabled);
   }
 
   get apiRules(): KibanaRule[] {
     if (!this.selectedApi) return [];
     const api = this.selectedApi.toLowerCase();
-    return this.rules.filter(r => !r.is_global && r.apis.some(a => a.toLowerCase() === api));
+    return this.rules.filter(r => !r.is_global && r.enabled && r.apis.some(a => a.toLowerCase() === api));
   }
 
   onApiChange(value: string): void {

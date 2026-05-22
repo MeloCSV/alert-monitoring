@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from typing import Dict, List, Optional, Tuple
@@ -42,9 +43,6 @@ class KibanaRuleMapper:
         apis = self._extract_apis(params)
         is_global = self._is_global(raw, tags, apis)
 
-        annotations = raw.get("annotations") or {}
-        message = annotations.get("message") or None
-
         return KibanaRule(
             rule_id=str(raw.get("id") or ""),
             name=str(raw.get("name") or ""),
@@ -59,7 +57,7 @@ class KibanaRuleMapper:
             last_execution_status=(raw.get("execution_status") or {}).get("status"),
             kibana_url=self._build_rule_url(raw.get("id"), config),
             kibana_name=config.name,
-            message=message,
+            message=self._extract_message(actions),
         )
 
     def _extract_apis(self, params: dict) -> List[str]:
@@ -106,6 +104,38 @@ class KibanaRuleMapper:
         match = re.search(r'"severity"\s*:\s*"([^"]+)"', body)
         if match:
             return match.group(1).capitalize()
+        return None
+
+    def _extract_message(self, actions: List[dict]) -> Optional[str]:
+        for action in actions:
+            params = action.get("params") or {}
+            connector = action.get("connector_type_id") or ""
+
+            # .index connector: documents[0].alerts[0].annotations.message
+            # or documents[0].message (direct)
+            if connector == ".index":
+                for doc in params.get("documents") or []:
+                    for alert in doc.get("alerts") or []:
+                        msg = (alert.get("annotations") or {}).get("message")
+                        if msg:
+                            return str(msg)
+                    msg = doc.get("message")
+                    if msg:
+                        return str(msg)
+
+            # .webhook connector: body is a JSON string → [0].annotations.message
+            if connector == ".webhook":
+                body = params.get("body")
+                if isinstance(body, str):
+                    try:
+                        parsed = json.loads(body)
+                        if isinstance(parsed, list) and parsed:
+                            msg = (parsed[0].get("annotations") or {}).get("message")
+                            if msg:
+                                return str(msg)
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+
         return None
 
     def _infer_channels(self, actions: List[dict]) -> List[str]:
