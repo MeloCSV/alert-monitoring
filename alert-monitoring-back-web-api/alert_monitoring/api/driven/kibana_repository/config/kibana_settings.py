@@ -7,23 +7,24 @@ from alert_monitoring.api.driven.kibana_repository.models.kibana_config import K
 
 logger = logging.getLogger(__name__)
 
-ENV_VAR = "KIBANAS"
+ENV_VAR_ELASTIC_GCP = "KIBANA_ELASTIC_GCP"
+ENV_VAR_ELASTIC = "KIBANA_ELASTIC"
 
 
-def load_kibanas_from_env() -> List[KibanaConfig]:
-    raw = os.environ.get(ENV_VAR)
+def _load_from_env(env_var: str) -> List[KibanaConfig]:
+    raw = os.environ.get(env_var)
     if not raw:
-        logger.warning("Variable de entorno %s no definida; no se consultará ningún Kibana.", ENV_VAR)
+        logger.warning("Variable de entorno %s no definida; no se consultará ningún Kibana.", env_var)
         return []
 
     try:
         items = json.loads(raw)
     except json.JSONDecodeError as exc:
-        logger.error("No se puede parsear %s como JSON: %s", ENV_VAR, exc)
+        logger.error("No se puede parsear %s como JSON: %s", env_var, exc)
         return []
 
     if not isinstance(items, list):
-        logger.error("%s debe ser una lista JSON de Kibanas.", ENV_VAR)
+        logger.error("%s debe ser una lista JSON de Kibanas.", env_var)
         return []
 
     configs: List[KibanaConfig] = []
@@ -41,3 +42,11 @@ def load_kibanas_from_env() -> List[KibanaConfig]:
         except KeyError as exc:
             logger.error("Kibana mal configurado, falta el campo %s: %s", exc, item.get("name", "?"))
     return configs
+
+
+def load_kibana_elastic_gcp_from_env() -> List[KibanaConfig]:
+    return _load_from_env(ENV_VAR_ELASTIC_GCP)
+
+
+def load_kibana_elastic_from_env() -> List[KibanaConfig]:
+    return _load_from_env(ENV_VAR_ELASTIC)
