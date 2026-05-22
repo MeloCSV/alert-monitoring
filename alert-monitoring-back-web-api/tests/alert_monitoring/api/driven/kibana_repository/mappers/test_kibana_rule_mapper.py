@@ -31,6 +31,28 @@ def _raw_rule(name: str, tags: list, kql: str = "", actions: list = None) -> dic
     }
 
 
+class TestNameCleaning:
+    def test_global_prefix_is_stripped_from_name(self, mapper, base_config):
+        """
+        Given a rule whose name starts with '[Global]'
+        When mapped
+        Then the name has the prefix removed
+        """
+        raw = _raw_rule("[Global] Errores Totales 15% OCP", tags=["global"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.name == "Errores Totales 15% OCP"
+
+    def test_global_prefix_stripped_case_insensitive(self, mapper, base_config):
+        raw = _raw_rule("[global] Some Rule", tags=["global"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.name == "Some Rule"
+
+    def test_non_global_prefix_is_preserved(self, mapper, base_config):
+        raw = _raw_rule("[Absence] Errores 500", tags=["api-mngt"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.name == "[Absence] Errores 500"
+
+
 class TestIsGlobal:
     def test_global_tag_marks_rule_as_global(self, mapper, base_config):
         """

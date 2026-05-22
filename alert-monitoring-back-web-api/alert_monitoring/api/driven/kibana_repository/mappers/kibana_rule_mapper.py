@@ -44,9 +44,10 @@ class KibanaRuleMapper:
         apis = self._extract_apis(params)
         is_global = self._is_global(raw, tags, apis)
 
+        raw_name = str(raw.get("name") or "")
         return KibanaRule(
             rule_id=str(raw.get("id") or ""),
-            name=str(raw.get("name") or ""),
+            name=re.sub(r"^\[global\]\s*", "", raw_name, flags=re.IGNORECASE),
             enabled=bool(raw.get("enabled", False)),
             tags=tags,
             schedule_interval=(raw.get("schedule") or {}).get("interval"),
