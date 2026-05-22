@@ -1,0 +1,170 @@
+<div class="page">
+  <div class="card">
+    <header class="card-header">
+      <h1>Alertas Kibana por API</h1>
+      <p class="subtitle">A la izquierda las alarmas globales (sin API identificable). A la derecha las alarmas asociadas a la API seleccionada.</p>
+    </header>
+
+    <section class="filters">
+      <div class="filters-mandatory">
+        <div class="filter api-filter">
+          <label>API</label>
+          <app-searchable-select
+            [options]="apiOptions"
+            placeholder="Selecciona una API"
+            [value]="selectedApi"
+            (valueChange)="onApiChange($event)"
+          ></app-searchable-select>
+        </div>
+      </div>
+    </section>
+
+    <section class="results">
+      @if (loading) {
+        <div class="state loading">Cargando reglas...</div>
+      }
+      @if (error) {
+        <div class="state error">Error al cargar las reglas de Kibana.</div>
+      }
+      @if (!loading && !error) {
+        <div class="panels">
+          <div class="panel">
+            <div class="panel-header global-header">
+              <h2>Alarmas Globales</h2>
+              <span class="count">{{ globalRules.length }}</span>
+            </div>
+            <div class="panel-body">
+              @if (globalRules.length === 0) {
+                <div class="empty-panel">No hay alarmas globales.</div>
+              } @else {
+                <table class="alert-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Habilitada</th>
+                      <th>Intervalo</th>
+                      <th>Severidad</th>
+                      <th>Canales</th>
+                      <th>Tags</th>
+                      <th>Última ejecución</th>
+                      <th>Kibana</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (rule of globalRules; track rule.rule_id) {
+                      <tr>
+                        <td><div class="alert-name">{{ rule.name }}</div></td>
+                        <td>
+                          <span class="status-tag" [class.status-on]="rule.enabled" [class.status-off]="!rule.enabled">
+                            {{ rule.enabled ? 'Sí' : 'No' }}
+                          </span>
+                        </td>
+                        <td>{{ rule.schedule_interval || '-' }}</td>
+                        <td class="severity-cell">
+                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                        </td>
+                        <td>
+                          @if (rule.notification_channels.length) {
+                            <div class="chip-list">
+                              @for (ch of rule.notification_channels; track ch) {
+                                <span class="chip chip-channel">{{ ch }}</span>
+                              }
+                            </div>
+                          } @else { - }
+                        </td>
+                        <td>
+                          @if (rule.tags.length) {
+                            <div class="chip-list">
+                              @for (tag of rule.tags; track tag) {
+                                <span class="chip chip-tag">{{ tag }}</span>
+                              }
+                            </div>
+                          } @else { - }
+                        </td>
+                        <td class="meta-cell">{{ formatLastExecution(rule.last_execution_date) }}</td>
+                        <td>
+                          @if (rule.kibana_url) {
+                            <a class="kibana-link" [href]="rule.kibana_url" target="_blank" rel="noopener">Abrir ↗</a>
+                          } @else { - }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header api-header">
+              <h2>Alarmas de la API {{ selectedApi ? '· ' + selectedApi : '' }}</h2>
+              <span class="count">{{ apiRules.length }}</span>
+            </div>
+            <div class="panel-body">
+              @if (!selectedApi) {
+                <div class="empty-panel">Selecciona una API para ver sus reglas.</div>
+              } @else if (apiRules.length === 0) {
+                <div class="empty-panel">No hay reglas para esta API.</div>
+              } @else {
+                <table class="alert-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Habilitada</th>
+                      <th>Intervalo</th>
+                      <th>Severidad</th>
+                      <th>Canales</th>
+                      <th>Tags</th>
+                      <th>Última ejecución</th>
+                      <th>Kibana</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (rule of apiRules; track rule.rule_id) {
+                      <tr>
+                        <td><div class="alert-name">{{ rule.name }}</div></td>
+                        <td>
+                          <span class="status-tag" [class.status-on]="rule.enabled" [class.status-off]="!rule.enabled">
+                            {{ rule.enabled ? 'Sí' : 'No' }}
+                          </span>
+                        </td>
+                        <td>{{ rule.schedule_interval || '-' }}</td>
+                        <td class="severity-cell">
+                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                        </td>
+                        <td>
+                          @if (rule.notification_channels.length) {
+                            <div class="chip-list">
+                              @for (ch of rule.notification_channels; track ch) {
+                                <span class="chip chip-channel">{{ ch }}</span>
+                              }
+                            </div>
+                          } @else { - }
+                        </td>
+                        <td>
+                          @if (rule.tags.length) {
+                            <div class="chip-list">
+                              @for (tag of rule.tags; track tag) {
+                                <span class="chip chip-tag">{{ tag }}</span>
+                              }
+                            </div>
+                          } @else { - }
+                        </td>
+                        <td class="meta-cell">{{ formatLastExecution(rule.last_execution_date) }}</td>
+                        <td>
+                          @if (rule.kibana_url) {
+                            <a class="kibana-link" [href]="rule.kibana_url" target="_blank" rel="noopener">Abrir ↗</a>
+                          } @else { - }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>

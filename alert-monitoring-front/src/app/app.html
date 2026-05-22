@@ -1,1 +1,14 @@
-<app-alert-table></app-alert-table>
+<nav class="top-tabs">
+  <button type="button" class="tab" [class.active]="activeTab === 'alerts'" (click)="select('alerts')">
+    Alarmas por aplicación
+  </button>
+  <button type="button" class="tab" [class.active]="activeTab === 'kibana-rules'" (click)="select('kibana-rules')">
+    Alarmas Kibana por API
+  </button>
+</nav>
+
+@if (activeTab === 'alerts') {
+  <app-alert-table></app-alert-table>
+} @else {
+  <app-kibana-rules></app-kibana-rules>
+}
