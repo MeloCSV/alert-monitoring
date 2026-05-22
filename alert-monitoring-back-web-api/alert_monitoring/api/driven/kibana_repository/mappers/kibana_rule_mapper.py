@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from alert_monitoring.api.domain.models.kibana_rule import KibanaRule
 from alert_monitoring.api.driven.kibana_repository.models.kibana_config import KibanaConfig
@@ -12,6 +12,14 @@ _API_FROM_KQL = re.compile(
     r"transactionElement\.serviceName\s*:\s*\"?([A-Za-z0-9_\-]+)\"?",
     re.IGNORECASE,
 )
+
+# Tags que son metadatos técnicos, no nombres de aplicación
+_META_TAGS = {
+    "alertmanager", "global", "blackout", "sap", "api-mngt", "api",
+    "infra", "timeout", "almacen", "warehouse", "test", "prueba",
+    "trabajadores-async",
+}
+
 _CONNECTOR_DISPLAY: Dict[str, str] = {
     ".webhook": "Webhook",
     ".index": "Elastic Index",
@@ -39,8 +47,8 @@ class KibanaRuleMapper:
         params = raw.get("params") or {}
         tags = [str(t) for t in (raw.get("tags") or []) if t]
 
-        apis = self._extract_apis(params)
-        is_global = self._is_global(raw, tags, apis)
+        apis = self._extract_apis(params, tags)
+        is_global = not apis
 
         return KibanaRule(
             rule_id=str(raw.get("id") or ""),
@@ -58,9 +66,10 @@ class KibanaRuleMapper:
             kibana_name=config.name,
         )
 
-    def _extract_apis(self, params: dict) -> List[str]:
+    def _extract_apis(self, params: dict, tags: List[str]) -> List[str]:
         apis: List[str] = []
 
+        # Primero intentamos extraer del KQL (reglas de tráfico API)
         search_config = params.get("searchConfiguration") or {}
         kql = (search_config.get("query") or {}).get("query") or ""
         for match in _API_FROM_KQL.finditer(kql):
@@ -68,10 +77,14 @@ class KibanaRuleMapper:
             if value and value not in apis:
                 apis.append(value)
 
-        return apis
+        # Si el KQL no dio resultado, usamos los tags como agrupador
+        if not apis:
+            for tag in tags:
+                clean = tag.strip()
+                if clean and clean.lower() not in _META_TAGS and clean not in apis:
+                    apis.append(clean)
 
-    def _is_global(self, raw: dict, tags: List[str], apis: List[str]) -> bool:
-        return not apis
+        return apis
 
     def _infer_severity(self, actions: List[dict]) -> Optional[str]:
         for action in actions:
