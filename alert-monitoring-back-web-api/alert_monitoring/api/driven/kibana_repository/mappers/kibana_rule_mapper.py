@@ -9,10 +9,11 @@ from alert_monitoring.api.driven.kibana_repository.models.kibana_config import K
 logger = logging.getLogger(__name__)
 
 
-_API_FROM_KQL = re.compile(
-    r"transactionElement\.serviceName\s*:\s*\"?([A-Za-z0-9_\-]+)\"?",
+_SERVICE_NAME_CLAUSE = re.compile(
+    r"(?P<neg>\bNOT\s+)?transactionElement\.serviceName\s*:\s*(?P<val>\([^)]+\)|\"[^\"]+\"|[A-Za-z0-9_\-]+)",
     re.IGNORECASE,
 )
+_QUOTED_VALUE = re.compile(r'"([A-Za-z0-9_\-]+)"')
 _CONNECTOR_DISPLAY: Dict[str, str] = {
     ".webhook": "Webhook",
     ".index": "Elastic Index",
@@ -61,19 +62,31 @@ class KibanaRuleMapper:
         )
 
     def _extract_apis(self, params: dict) -> List[str]:
-        apis: List[str] = []
-
         search_config = params.get("searchConfiguration") or {}
         kql = (search_config.get("query") or {}).get("query") or ""
-        for match in _API_FROM_KQL.finditer(kql):
-            value = match.group(1).strip()
-            if value and value not in apis:
-                apis.append(value)
 
-        return apis
+        positive: set = set()
+        negated: set = set()
+
+        for m in _SERVICE_NAME_CLAUSE.finditer(kql):
+            is_negated = bool(m.group("neg"))
+            clause = m.group("val")
+
+            if clause.startswith("("):
+                values = [qm.group(1) for qm in _QUOTED_VALUE.finditer(clause)]
+            elif clause.startswith('"'):
+                values = [clause.strip('"')]
+            else:
+                values = [clause.strip()]
+
+            for v in values:
+                if v:
+                    (negated if is_negated else positive).add(v)
+
+        return [v for v in positive if v not in negated]
 
     def _is_global(self, raw: dict, tags: List[str], apis: List[str]) -> bool:
-        return not apis
+        return "global" in tags
 
     def _infer_severity(self, actions: List[dict]) -> Optional[str]:
         for action in actions:
