@@ -2,7 +2,10 @@ import logging
 from typing import List, Optional, Tuple
 
 from alert_monitoring.api.driven.kibana_repository.clients.kibana_http_client import KibanaHttpClient
-from alert_monitoring.api.driven.kibana_repository.config.kibana_settings import load_kibanas_from_env
+from alert_monitoring.api.driven.kibana_repository.config.kibana_settings import (
+    load_kibana_elastic_from_env,
+    load_kibana_elastic_gcp_from_env,
+)
 from alert_monitoring.api.driven.kibana_repository.models.kibana_config import KibanaConfig
 
 logger = logging.getLogger(__name__)
@@ -14,7 +17,7 @@ class KibanaAdapter:
         self.client = client or KibanaHttpClient()
 
     def fetch_rules(self, configs: Optional[List[KibanaConfig]] = None) -> List[dict]:
-        configs = configs if configs is not None else load_kibanas_from_env()
+        configs = configs if configs is not None else load_kibana_elastic_gcp_from_env()
         if not configs:
             return []
 
@@ -27,7 +30,7 @@ class KibanaAdapter:
     def fetch_rules_by_config(
         self, configs: Optional[List[KibanaConfig]] = None
     ) -> List[Tuple[KibanaConfig, List[dict]]]:
-        configs = configs if configs is not None else load_kibanas_from_env()
+        configs = configs if configs is not None else load_kibana_elastic_from_env()
         if not configs:
             return []
 
