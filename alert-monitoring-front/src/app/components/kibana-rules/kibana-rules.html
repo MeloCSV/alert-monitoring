@@ -2,7 +2,7 @@
   <div class="card">
     <header class="card-header">
       <h1>Alertas Kibana por API</h1>
-      <p class="subtitle">A la izquierda las alarmas globales (sin API identificable). A la derecha las alarmas asociadas a la API seleccionada.</p>
+      <p class="subtitle">A la izquierda las alarmas por defecto. A la derecha las alarmas ad-hoc.</p>
     </header>
 
     <section class="filters">
@@ -30,7 +30,7 @@
         <div class="panels">
           <div class="panel">
             <div class="panel-header global-header">
-              <h2>Alarmas Globales</h2>
+              <h2>Alarmas por defecto</h2>
               <span class="count">{{ globalRules.length }}</span>
             </div>
             <div class="panel-body">
@@ -66,7 +66,7 @@
 
           <div class="panel">
             <div class="panel-header api-header">
-              <h2>Alarmas de la API {{ selectedApi ? '· ' + selectedApi : '' }}</h2>
+              <h2>Alarmas ad-hoc </h2>
               <span class="count">{{ apiRules.length }}</span>
             </div>
             <div class="panel-body">
