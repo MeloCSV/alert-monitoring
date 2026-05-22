@@ -40,28 +40,20 @@
                 <table class="alert-table">
                   <thead>
                     <tr>
-                      <th>Nombre</th>
-                      <th>Habilitada</th>
-                      <th>Intervalo</th>
+                      <th>Alarma</th>
+                      <th>Canal de salida</th>
                       <th>Severidad</th>
-                      <th>Canales</th>
-                      <th>Tags</th>
-                      <th>Última ejecución</th>
-                      <th>Kibana</th>
+                      <th>Entorno</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (rule of globalRules; track rule.rule_id) {
                       <tr>
-                        <td><div class="alert-name">{{ rule.name }}</div></td>
                         <td>
-                          <span class="status-tag" [class.status-on]="rule.enabled" [class.status-off]="!rule.enabled">
-                            {{ rule.enabled ? 'Sí' : 'No' }}
-                          </span>
-                        </td>
-                        <td>{{ rule.schedule_interval || '-' }}</td>
-                        <td class="severity-cell">
-                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                          <div class="alert-name">{{ rule.name }}</div>
+                          @if (rule.message) {
+                            <div class="alert-desc">{{ rule.message }}</div>
+                          }
                         </td>
                         <td>
                           @if (rule.notification_channels.length) {
@@ -72,21 +64,10 @@
                             </div>
                           } @else { - }
                         </td>
-                        <td>
-                          @if (rule.tags.length) {
-                            <div class="chip-list">
-                              @for (tag of rule.tags; track tag) {
-                                <span class="chip chip-tag">{{ tag }}</span>
-                              }
-                            </div>
-                          } @else { - }
+                        <td class="severity-cell">
+                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
                         </td>
-                        <td class="meta-cell">{{ formatLastExecution(rule.last_execution_date) }}</td>
-                        <td>
-                          @if (rule.kibana_url) {
-                            <a class="kibana-link" [href]="rule.kibana_url" target="_blank" rel="noopener">Abrir ↗</a>
-                          } @else { - }
-                        </td>
+                        <td>{{ rule.kibana_name || '-' }}</td>
                       </tr>
                     }
                   </tbody>
@@ -109,28 +90,20 @@
                 <table class="alert-table">
                   <thead>
                     <tr>
-                      <th>Nombre</th>
-                      <th>Habilitada</th>
-                      <th>Intervalo</th>
+                      <th>Alarma</th>
+                      <th>Canal de salida</th>
                       <th>Severidad</th>
-                      <th>Canales</th>
-                      <th>Tags</th>
-                      <th>Última ejecución</th>
-                      <th>Kibana</th>
+                      <th>Entorno</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (rule of apiRules; track rule.rule_id) {
                       <tr>
-                        <td><div class="alert-name">{{ rule.name }}</div></td>
                         <td>
-                          <span class="status-tag" [class.status-on]="rule.enabled" [class.status-off]="!rule.enabled">
-                            {{ rule.enabled ? 'Sí' : 'No' }}
-                          </span>
-                        </td>
-                        <td>{{ rule.schedule_interval || '-' }}</td>
-                        <td class="severity-cell">
-                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                          <div class="alert-name">{{ rule.name }}</div>
+                          @if (rule.message) {
+                            <div class="alert-desc">{{ rule.message }}</div>
+                          }
                         </td>
                         <td>
                           @if (rule.notification_channels.length) {
@@ -141,21 +114,10 @@
                             </div>
                           } @else { - }
                         </td>
-                        <td>
-                          @if (rule.tags.length) {
-                            <div class="chip-list">
-                              @for (tag of rule.tags; track tag) {
-                                <span class="chip chip-tag">{{ tag }}</span>
-                              }
-                            </div>
-                          } @else { - }
+                        <td class="severity-cell">
+                          <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
                         </td>
-                        <td class="meta-cell">{{ formatLastExecution(rule.last_execution_date) }}</td>
-                        <td>
-                          @if (rule.kibana_url) {
-                            <a class="kibana-link" [href]="rule.kibana_url" target="_blank" rel="noopener">Abrir ↗</a>
-                          } @else { - }
-                        </td>
+                        <td>{{ rule.kibana_name || '-' }}</td>
                       </tr>
                     }
                   </tbody>

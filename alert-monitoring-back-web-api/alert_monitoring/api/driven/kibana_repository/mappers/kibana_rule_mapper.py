@@ -42,6 +42,9 @@ class KibanaRuleMapper:
         apis = self._extract_apis(params)
         is_global = self._is_global(raw, tags, apis)
 
+        annotations = raw.get("annotations") or {}
+        message = annotations.get("message") or None
+
         return KibanaRule(
             rule_id=str(raw.get("id") or ""),
             name=str(raw.get("name") or ""),
@@ -56,6 +59,7 @@ class KibanaRuleMapper:
             last_execution_status=(raw.get("execution_status") or {}).get("status"),
             kibana_url=self._build_rule_url(raw.get("id"), config),
             kibana_name=config.name,
+            message=message,
         )
 
     def _extract_apis(self, params: dict) -> List[str]:

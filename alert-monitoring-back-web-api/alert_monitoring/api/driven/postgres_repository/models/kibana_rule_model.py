@@ -23,3 +23,4 @@ class KibanaRuleDB(SQLModel, table=True):
     last_execution_status: Optional[str] = None
     kibana_url: Optional[str] = None
     kibana_name: Optional[str] = None
+    message: Optional[str] = None

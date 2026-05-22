@@ -22,6 +22,7 @@ class KibanaRuleDBMapper:
             last_execution_status=rule.last_execution_status,
             kibana_url=rule.kibana_url,
             kibana_name=rule.kibana_name,
+            message=rule.message,
         )
 
     def to_domain(self, rule_db: KibanaRuleDB) -> KibanaRule:
@@ -39,6 +40,7 @@ class KibanaRuleDBMapper:
             last_execution_status=rule_db.last_execution_status,
             kibana_url=rule_db.kibana_url,
             kibana_name=rule_db.kibana_name,
+            message=rule_db.message,
         )
 
     def to_domain_list(self, rules_db: List[KibanaRuleDB]) -> List[KibanaRule]:
