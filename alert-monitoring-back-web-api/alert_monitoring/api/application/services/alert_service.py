@@ -156,5 +156,4 @@ class AlertService(AlertServicePort):
 
     def get_solution_view(self, solution: str) -> SolutionView:
         self.logger.info(f'get_solution_view solution={solution}')
-        blackouts = self.get_active_blackouts()
-        return self.get_solution_view_use_case.execute(solution, blackouts)
+        return self.get_solution_view_use_case.execute(solution)

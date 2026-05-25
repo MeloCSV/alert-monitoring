@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { AlertService, Alert, Blackout, DefaultAlertView } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
@@ -18,7 +19,7 @@ export class AlertTableComponent implements OnInit {
 
   private adhocData: Alert[] = [];
   private defaultData: DefaultAlertView[] = [];
-  blackouts: Blackout[] = [];
+  private allBlackouts: Blackout[] = [];
   channels: string[] = [];
 
   loading = true;
@@ -38,9 +39,13 @@ export class AlertTableComponent implements OnInit {
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.alertService.getCatalogApps().subscribe({
-      next: (apps) => {
+    forkJoin({
+      apps: this.alertService.getCatalogApps(),
+      blackouts: this.alertService.getBlackouts(),
+    }).subscribe({
+      next: ({ apps, blackouts }) => {
         this.solutionOptions = apps.map(a => a.name);
+        this.allBlackouts = blackouts;
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -61,7 +66,6 @@ export class AlertTableComponent implements OnInit {
     if (!value) {
       this.adhocData = [];
       this.defaultData = [];
-      this.blackouts = [];
       this.channels = [];
       this.solutionLoading = false;
       this.cdr.detectChanges();
@@ -74,7 +78,6 @@ export class AlertTableComponent implements OnInit {
       next: (view) => {
         this.defaultData = view.default_alerts;
         this.adhocData = view.adhoc_alerts;
-        this.blackouts = view.blackouts;
         this.channels = view.channels;
         this.solutionLoading = false;
         this.cdr.detectChanges();
@@ -88,7 +91,18 @@ export class AlertTableComponent implements OnInit {
   }
 
   get applicationSilences(): Blackout[] {
-    return this.blackouts;
+    if (!this.solutionName) return [];
+    const sol = this.solutionName.toLowerCase();
+    const variants = [sol, `${sol}-back`, `${sol}-front`];
+    const appFields = new Set(['namespace', 'solucion', 'solution', 'exported_namespace',
+      'backend_target_name', 'deployment', 'replicaset', 'cronjob', 'pod']);
+    return this.allBlackouts.filter(b =>
+      b.matchers.some(m => {
+        if (!appFields.has(m.name) || !m.is_equal) return false;
+        const val = m.value.toLowerCase();
+        return variants.some(v => val === v || val.startsWith(`${v}-`));
+      })
+    );
   }
 
   get defaultAlerts(): DefaultAlertView[] {
