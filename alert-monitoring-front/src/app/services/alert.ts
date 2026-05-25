@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface CatalogApp {
@@ -8,18 +8,6 @@ export interface CatalogApp {
   name: string;
   csw_code: string | null;
   platform: string | null;
-}
-
-export interface DefaultAlert {
-  raw_name: string;
-  display_name: string;
-  raw_description: string | null;
-  display_description: string | null;
-  severity: string | null;
-  notification_channel: string | null;
-  excluded_namespaces: string[];
-  included_namespaces: string[];
-  excluded_jobs: string[];
 }
 
 export interface Alert {
@@ -38,14 +26,6 @@ export interface Alert {
   is_overridden?: boolean;
   is_partial?: boolean;
   chips?: string[];
-}
-
-export interface AlertOverride {
-  alert_name: string;
-  solution: string;
-  is_disabled: boolean;
-  is_partial: boolean;
-  excluded_items: string[];
 }
 
 export interface BlackoutMatcher {
@@ -81,6 +61,26 @@ export interface KibanaRule {
   message: string | null;
 }
 
+export interface DefaultAlertView {
+  raw_name: string;
+  name: string;
+  description: string | null;
+  severity: string | null;
+  notification_channel: string | null;
+  environments: string[];
+  is_overridden: boolean;
+  is_partial: boolean;
+  chips: string[];
+}
+
+export interface SolutionView {
+  solution: string;
+  default_alerts: DefaultAlertView[];
+  adhoc_alerts: Alert[];
+  blackouts: Blackout[];
+  channels: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AlertService {
   private readonly apiUrl = 'http://localhost:8080/alerts';
@@ -89,24 +89,13 @@ export class AlertService {
 
   constructor(private http: HttpClient) {}
 
-  getAlerts(): Observable<Alert[]> {
-    return this.http.get<Alert[]>(this.apiUrl);
-  }
-
-  getOverrides(): Observable<AlertOverride[]> {
-    return this.http.get<AlertOverride[]>(`${this.apiUrl}/overrides`);
-  }
-
-  getBlackouts(): Observable<Blackout[]> {
-    return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`);
-  }
-
   getCatalogApps(): Observable<CatalogApp[]> {
     return this.http.get<CatalogApp[]>(this.catalogUrl);
   }
 
-  getDefaultAlerts(): Observable<DefaultAlert[]> {
-    return this.http.get<DefaultAlert[]>(`${this.apiUrl}/defaults`);
+  getSolutionView(solution: string): Observable<SolutionView> {
+    const params = new HttpParams().set('solution', solution);
+    return this.http.get<SolutionView>(`${this.apiUrl}/view`, { params });
   }
 
   getKibanaRuleApis(): Observable<string[]> {

@@ -6,6 +6,12 @@ ALL_ENVIRONMENTS: Tuple[str, ...] = ("dev", "itg", "pre", "pro")
 NAMESPACE_LABEL_KEYS: Tuple[str, ...] = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
 JOB_LABEL_KEYS: Tuple[str, ...] = ("job_name", "deployment", "horizontalpodautoscaler")
 
+# Etiquetas cuyo valor se muestra como "chip" en las alertas Ad-hoc (jobs + namespaces alarmados).
+ADHOC_CHIP_LABEL_KEYS: Tuple[str, ...] = (
+    "job_name", "deployment", "horizontalpodautoscaler", "cronjob",
+    "namespace", "exported_namespace", "backend_target_name", "backend_name",
+)
+
 # Lookup de traducción: raw_name → (display_name, display_description).
 # NO es la fuente de verdad de qué alertas existen; eso lo son las Prometheus rules.
 # Si un raw_name nuevo aparece en Prometheus y no está aquí, se mostrará el raw_name en la UI
@@ -141,6 +147,35 @@ def extract_label_alternatives(expr: Optional[str], keys: Iterable[str], exclude
                 if part and part not in alternatives:
                     alternatives.append(part)
     return alternatives
+
+
+def clean_label_value(value: str) -> str:
+    """Limpia el valor de una etiqueta para mostrarlo: quita anclas/comodines de regex."""
+    cleaned = value.strip()
+    if cleaned.startswith("^"):
+        cleaned = cleaned[1:]
+    if cleaned.endswith("$"):
+        cleaned = cleaned[:-1]
+    for suffix in (".*", ".+"):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[: -len(suffix)]
+            break
+    return cleaned.rstrip("-").strip()
+
+
+def extract_adhoc_chips(expr: Optional[str]) -> List[str]:
+    """Extrae los jobs/namespaces alarmados (selectores ``=`` o ``=~``) de una condición Ad-hoc."""
+    if not expr:
+        return []
+    chips: List[str] = []
+    for key in ADHOC_CHIP_LABEL_KEYS:
+        regex = rf'{key}\s*=~?\s*"([^"]+)"'
+        for match in re.findall(regex, expr):
+            for raw in match.split("|"):
+                cleaned = clean_label_value(raw)
+                if cleaned and cleaned not in chips:
+                    chips.append(cleaned)
+    return chips
 
 
 def _split_top_level_alternatives(pattern: str) -> List[str]:

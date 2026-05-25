@@ -5,6 +5,7 @@ from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
+from alert_monitoring.api.domain.models.solution_view import SolutionView
 
 
 class AlertServicePort(ABC):
@@ -31,4 +32,8 @@ class AlertServicePort(ABC):
 
     @abstractmethod
     def get_default_alerts(self) -> List[DefaultAlert]:
+        pass
+
+    @abstractmethod
+    def get_solution_view(self, solution: str) -> SolutionView:
         pass

@@ -87,17 +87,23 @@
 
     <section class="results">
       @if (loading) {
-        <div class="state loading">Cargando alertas...</div>
+        <div class="state loading">Cargando aplicaciones...</div>
       }
-      @if (error) {
-        <div class="state error">Error al cargar las alertas.</div>
+      @if (!loading && error) {
+        <div class="state error">Error al cargar el catálogo de aplicaciones.</div>
       }
       @if (!loading && !error && !hasSolutionSelected) {
         <div class="state empty-select">
           Selecciona una aplicación para visualizar sus alarmas.
         </div>
       }
-      @if (!loading && !error && hasSolutionSelected) {
+      @if (!loading && !error && hasSolutionSelected && solutionLoading) {
+        <div class="state loading">Cargando alertas...</div>
+      }
+      @if (!loading && !error && hasSolutionSelected && !solutionLoading && solutionError) {
+        <div class="state error">Error al cargar las alertas.</div>
+      }
+      @if (!loading && !error && hasSolutionSelected && !solutionLoading && !solutionError) {
 
         @if (applicationSilences.length > 0) {
           <div class="silences-section">

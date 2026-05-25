@@ -41,6 +41,8 @@ class RecomputeOverridesUseCase:
             for sol in solutions:
                 micros = solution_micros[sol]
                 is_disabled, is_partial, excluded_items = _evaluate(default_alert, sol, micros)
+                if not (is_disabled or is_partial or excluded_items):
+                    continue
                 overrides.append(AlertOverride(
                     alert_name=default_alert.raw_name,
                     solution=sol,
