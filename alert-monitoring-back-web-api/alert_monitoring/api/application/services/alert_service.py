@@ -9,6 +9,7 @@ from alert_monitoring.api.application.ports.driven.alert_override_repository_por
 from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
+from alert_monitoring.api.application.use_cases.get_solution_view_use_case import GetSolutionViewUseCase
 from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
 from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY
@@ -23,6 +24,7 @@ from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.alert_override import AlertOverride
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
+from alert_monitoring.api.domain.models.solution_view import SolutionView
 
 
 class AlertService(AlertServicePort):
@@ -43,6 +45,9 @@ class AlertService(AlertServicePort):
         self.save_use_case = SaveAlertsUseCase(alert_repository)
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
         self.recompute_overrides_use_case = RecomputeOverridesUseCase(
+            alert_repository, alert_override_repository, default_alert_repository
+        )
+        self.get_solution_view_use_case = GetSolutionViewUseCase(
             alert_repository, alert_override_repository, default_alert_repository
         )
         self.prometheus_adapter = PrometheusAdapter()
@@ -148,3 +153,8 @@ class AlertService(AlertServicePort):
     def get_default_alerts(self) -> List[DefaultAlert]:
         self.logger.info('get_default_alerts')
         return self.default_alert_repository.get_all()
+
+    def get_solution_view(self, solution: str) -> SolutionView:
+        self.logger.info(f'get_solution_view solution={solution}')
+        blackouts = self.get_active_blackouts()
+        return self.get_solution_view_use_case.execute(solution, blackouts)

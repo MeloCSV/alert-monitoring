@@ -14,3 +14,4 @@ class AlertResponse(BaseModel):
     alert_type: str = "Ad-hoc"
     cluster: Optional[str] = None
     prometheus_name: Optional[str] = None
+    chips: List[str] = []
