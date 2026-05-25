@@ -99,6 +99,12 @@ export class AlertTableComponent implements OnInit {
     return this.allBlackouts.filter(b =>
       b.matchers.some(m => {
         if (!appFields.has(m.name) || !m.is_equal) return false;
+        if (m.is_regex) {
+          try {
+            const re = new RegExp(m.value, 'i');
+            return variants.some(v => re.test(v));
+          } catch { return false; }
+        }
         const val = m.value.toLowerCase();
         return variants.some(v => val === v || val.startsWith(`${v}-`));
       })
