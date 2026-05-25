@@ -12,10 +12,7 @@ from alert_monitoring.api.driving.api_rest.models.alert_response import AlertRes
 from alert_monitoring.api.driving.api_rest.models.alert_override_response import AlertOverrideResponse
 from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse, BlackoutMatcherResponse
 from alert_monitoring.api.driving.api_rest.models.default_alert_response import DefaultAlertResponse
-from alert_monitoring.api.driving.api_rest.models.solution_view_response import (
-    DefaultAlertViewResponse,
-    SolutionViewResponse,
-)
+from alert_monitoring.api.driving.api_rest.models.solution_view_response import DefaultAlertViewResponse, SolutionViewResponse
 from alert_monitoring.api.driving.api_rest.mappers.alert_dto_mapper import AlertDTOMapper
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
@@ -139,17 +136,6 @@ def get_solution_view(
         solution=view.solution,
         default_alerts=[DefaultAlertViewResponse(**d.model_dump()) for d in view.default_alerts],
         adhoc_alerts=[AlertResponse(**a.model_dump()) for a in view.adhoc_alerts],
-        blackouts=[
-            BlackoutResponse(
-                id=b.id,
-                matchers=[BlackoutMatcherResponse(**m.model_dump()) for m in b.matchers],
-                starts_at=b.starts_at,
-                ends_at=b.ends_at,
-                created_by=b.created_by,
-                comment=b.comment,
-            )
-            for b in view.blackouts
-        ],
         channels=view.channels,
     )
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))

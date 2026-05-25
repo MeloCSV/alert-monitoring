@@ -3,7 +3,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from alert_monitoring.api.driving.api_rest.models.alert_response import AlertResponse
-from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse
 
 
 class DefaultAlertViewResponse(BaseModel):
@@ -22,5 +21,4 @@ class SolutionViewResponse(BaseModel):
     solution: str
     default_alerts: List[DefaultAlertViewResponse] = Field(default_factory=list)
     adhoc_alerts: List[AlertResponse] = Field(default_factory=list)
-    blackouts: List[BlackoutResponse] = Field(default_factory=list)
     channels: List[str] = Field(default_factory=list)

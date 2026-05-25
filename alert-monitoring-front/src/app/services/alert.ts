@@ -77,7 +77,6 @@ export interface SolutionView {
   solution: string;
   default_alerts: DefaultAlertView[];
   adhoc_alerts: Alert[];
-  blackouts: Blackout[];
   channels: string[];
 }
 
@@ -96,6 +95,10 @@ export class AlertService {
   getSolutionView(solution: string): Observable<SolutionView> {
     const params = new HttpParams().set('solution', solution);
     return this.http.get<SolutionView>(`${this.apiUrl}/view`, { params });
+  }
+
+  getBlackouts(): Observable<Blackout[]> {
+    return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`);
   }
 
   getKibanaRuleApis(): Observable<string[]> {
