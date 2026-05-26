@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List
 
 import httpx
@@ -22,15 +23,19 @@ class KibanaHttpClient:
         }
 
         rules: List[dict] = []
+        fetch_start = time.perf_counter()
         with httpx.Client(verify=config.verify_ssl, timeout=DEFAULT_TIMEOUT) as client:
             for page in range(1, config.max_pages + 1):
                 params = {"page": page, "per_page": config.per_page}
+                page_start = time.perf_counter()
                 try:
                     response = client.get(url, headers=headers, params=params)
                     response.raise_for_status()
                 except httpx.HTTPError as exc:
                     logger.error("Error al consultar reglas en Kibana %s (page=%s): %s", config.name, page, exc)
                     return rules
+                page_ms = (time.perf_counter() - page_start) * 1000
+                logger.info("[TIMER] Kibana %s page=%d → %.1f ms", config.name, page, page_ms)
 
                 payload = response.json()
                 data = payload.get("data") if isinstance(payload, dict) else None
@@ -49,6 +54,8 @@ class KibanaHttpClient:
                     config.max_pages, config.name,
                 )
 
+        total_ms = (time.perf_counter() - fetch_start) * 1000
+        logger.info("[TIMER] Kibana %s total → %.1f ms (%d reglas)", config.name, total_ms, len(rules))
         return rules
 
     def _build_url(self, config: KibanaConfig) -> str:

@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 
@@ -9,10 +10,10 @@ from alert_monitoring.api.driven.prometheus_repository.models.cluster_config imp
 logger = logging.getLogger(__name__)
 
 class PrometheusAdapter:
-        
+
     def __init__(self, client: KubernetesPrometheusClient | None = None) -> None:
         self.client = client or KubernetesPrometheusClient()
-    
+
     def fetch_rules(self, clusters: List[ClusterConfig] | None = None) -> List[PrometheusRule]:
         clusters = clusters if clusters is not None else load_clusters_from_env()
         if not clusters:
@@ -20,7 +21,10 @@ class PrometheusAdapter:
         rules: List[PrometheusRule] = []
         for cluster in clusters:
             logger.info("Recogiendo PrometheusRules del cluster %s", cluster.name)
+            t0 = time.perf_counter()
             cluster_rules = self.client.fetch_rules(cluster)
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info("[TIMER] Prometheus cluster=%s → %.1f ms (%d reglas)", cluster.name, elapsed_ms, len(cluster_rules))
             for rule in cluster_rules:
                 rule.cluster_name = cluster.name
             rules.extend(cluster_rules)

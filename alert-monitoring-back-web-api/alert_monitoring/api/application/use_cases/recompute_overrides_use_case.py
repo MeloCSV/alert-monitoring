@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from typing import List, Set, Tuple
 
@@ -11,6 +12,9 @@ from alert_monitoring.api.driven.shared.alert_normalization import (
     JOB_LABEL_KEYS,
     extract_label_alternatives,
 )
+from alert_monitoring.api.driven.shared.timer import log_timer
+
+logger = logging.getLogger(__name__)
 
 
 class RecomputeOverridesUseCase:
@@ -25,33 +29,40 @@ class RecomputeOverridesUseCase:
         self.default_alert_repository = default_alert_repository
 
     def execute(self) -> int:
-        alerts = self.alert_repository.get_all()
+        with log_timer("recompute: alert_repository.get_all"):
+            alerts = self.alert_repository.get_all()
 
-        # Build solution → set of microservices from Ad-hoc alerts
-        solution_micros: dict[str, Set[str]] = defaultdict(set)
-        for a in alerts:
-            if a.alert_type == "Ad-hoc" and a.solution and a.solution != "unknown" and a.microservice:
-                solution_micros[a.solution].add(a.microservice)
+        with log_timer(f"recompute: build solution_micros ({len(alerts)} alerts)"):
+            solution_micros: dict[str, Set[str]] = defaultdict(set)
+            for a in alerts:
+                if a.alert_type == "Ad-hoc" and a.solution and a.solution != "unknown" and a.microservice:
+                    solution_micros[a.solution].add(a.microservice)
 
         solutions = sorted(solution_micros.keys())
-        default_alerts = self.default_alert_repository.get_all()
 
-        overrides: List[AlertOverride] = []
-        for default_alert in default_alerts:
-            for sol in solutions:
-                micros = solution_micros[sol]
-                is_disabled, is_partial, excluded_items = _evaluate(default_alert, sol, micros)
-                if not (is_disabled or is_partial or excluded_items):
-                    continue
-                overrides.append(AlertOverride(
-                    alert_name=default_alert.raw_name,
-                    solution=sol,
-                    is_disabled=is_disabled,
-                    is_partial=is_partial,
-                    excluded_items=excluded_items,
-                ))
+        with log_timer("recompute: default_alert_repository.get_all"):
+            default_alerts = self.default_alert_repository.get_all()
 
-        self.override_repository.replace_all(overrides)
+        logger.info("[TIMER] recompute: %d defaults × %d solutions", len(default_alerts), len(solutions))
+
+        with log_timer(f"recompute: evaluate overrides ({len(default_alerts)}×{len(solutions)})"):
+            overrides: List[AlertOverride] = []
+            for default_alert in default_alerts:
+                for sol in solutions:
+                    micros = solution_micros[sol]
+                    is_disabled, is_partial, excluded_items = _evaluate(default_alert, sol, micros)
+                    if not (is_disabled or is_partial or excluded_items):
+                        continue
+                    overrides.append(AlertOverride(
+                        alert_name=default_alert.raw_name,
+                        solution=sol,
+                        is_disabled=is_disabled,
+                        is_partial=is_partial,
+                        excluded_items=excluded_items,
+                    ))
+
+        with log_timer(f"recompute: override_repository.replace_all ({len(overrides)} overrides)"):
+            self.override_repository.replace_all(overrides)
         return len(overrides)
 
 

@@ -13,6 +13,7 @@ from alert_monitoring.api.application.use_cases.get_solution_view_use_case impor
 from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
 from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY
+from alert_monitoring.api.driven.shared.timer import log_timer
 from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
@@ -112,30 +113,47 @@ class AlertService(AlertServicePort):
 
     def sync_prometheus_alerts(self) -> int:
         self.logger.info('sync_prometheus_alerts')
-        rules = self.prometheus_adapter.fetch_rules()
-        alerts = self.prometheus_mapper.to_domain(rules)
-        catalog_lookup = self._build_catalog_lookup()
-        self._normalize_solutions(alerts, catalog_lookup)
+        with log_timer("prometheus_adapter.fetch_rules", self.logger):
+            rules = self.prometheus_adapter.fetch_rules()
+        with log_timer("prometheus_mapper.to_domain", self.logger):
+            alerts = self.prometheus_mapper.to_domain(rules)
+        with log_timer("_build_catalog_lookup", self.logger):
+            catalog_lookup = self._build_catalog_lookup()
+        with log_timer("_normalize_solutions", self.logger):
+            self._normalize_solutions(alerts, catalog_lookup)
 
         default_rules = [a for a in alerts if a.alert_type == "Por Defecto"]
         adhoc_alerts = [a for a in alerts if a.alert_type != "Por Defecto"]
+        self.logger.info("[TIMER] split → %d adhoc, %d default", len(adhoc_alerts), len(default_rules))
 
-        self.alert_repository.delete_by_source_tool("Prometheus")
-        self.save_use_case.execute(adhoc_alerts)
-        self._upsert_default_alerts(default_rules)
-        self.recompute_overrides_use_case.execute()
+        with log_timer("alert_repository.delete_by_source_tool(Prometheus)", self.logger):
+            self.alert_repository.delete_by_source_tool("Prometheus")
+        with log_timer(f"save_use_case.execute ({len(adhoc_alerts)} alerts)", self.logger):
+            self.save_use_case.execute(adhoc_alerts)
+        with log_timer(f"_upsert_default_alerts ({len(default_rules)} defaults)", self.logger):
+            self._upsert_default_alerts(default_rules)
+        with log_timer("recompute_overrides_use_case.execute", self.logger):
+            self.recompute_overrides_use_case.execute()
         return len(alerts)
 
     def sync_elastic_alerts(self) -> int:
         self.logger.info('sync_elastic_alerts')
-        raw_rules = self.kibana_adapter.fetch_rules()
-        rules = self.elastic_adapter.parse_rules(raw_rules)
-        alerts = self.elastic_mapper.to_domain(rules)
-        catalog_lookup = self._build_catalog_lookup()
-        self._normalize_solutions(alerts, catalog_lookup)
-        self.alert_repository.delete_by_source_tool("Elastic")
-        self.save_use_case.execute(alerts)
-        self.recompute_overrides_use_case.execute()
+        with log_timer("kibana_adapter.fetch_rules", self.logger):
+            raw_rules = self.kibana_adapter.fetch_rules()
+        with log_timer("elastic_adapter.parse_rules", self.logger):
+            rules = self.elastic_adapter.parse_rules(raw_rules)
+        with log_timer("elastic_mapper.to_domain", self.logger):
+            alerts = self.elastic_mapper.to_domain(rules)
+        with log_timer("_build_catalog_lookup", self.logger):
+            catalog_lookup = self._build_catalog_lookup()
+        with log_timer("_normalize_solutions", self.logger):
+            self._normalize_solutions(alerts, catalog_lookup)
+        with log_timer("alert_repository.delete_by_source_tool(Elastic)", self.logger):
+            self.alert_repository.delete_by_source_tool("Elastic")
+        with log_timer(f"save_use_case.execute ({len(alerts)} alerts)", self.logger):
+            self.save_use_case.execute(alerts)
+        with log_timer("recompute_overrides_use_case.execute", self.logger):
+            self.recompute_overrides_use_case.execute()
         return len(alerts)
 
     def get_all_alerts(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
