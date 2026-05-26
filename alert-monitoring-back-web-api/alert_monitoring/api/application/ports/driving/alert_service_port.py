@@ -27,7 +27,7 @@ class AlertServicePort(ABC):
         pass
 
     @abstractmethod
-    def get_active_blackouts(self) -> List[Blackout]:
+    def get_active_blackouts(self, solution: Optional[str] = None) -> List[Blackout]:
         pass
 
     @abstractmethod
