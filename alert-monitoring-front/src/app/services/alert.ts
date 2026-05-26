@@ -97,8 +97,9 @@ export class AlertService {
     return this.http.get<SolutionView>(`${this.apiUrl}/view`, { params });
   }
 
-  getBlackouts(): Observable<Blackout[]> {
-    return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`);
+  getBlackouts(solution?: string): Observable<Blackout[]> {
+    const params = solution ? new HttpParams().set('solution', solution) : undefined;
+    return this.http.get<Blackout[]>(`${this.apiUrl}/blackouts`, { params });
   }
 
   getKibanaRuleApis(): Observable<string[]> {
