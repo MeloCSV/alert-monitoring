@@ -1,6 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
 import { AlertService, Alert, Blackout, DefaultAlertView } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
@@ -39,19 +38,22 @@ export class AlertTableComponent implements OnInit {
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    forkJoin({
-      apps: this.alertService.getCatalogApps(),
-      blackouts: this.alertService.getBlackouts(),
-    }).subscribe({
-      next: ({ apps, blackouts }) => {
+    this.alertService.getCatalogApps().subscribe({
+      next: (apps) => {
         this.solutionOptions = apps.map(a => a.name);
-        this.allBlackouts = blackouts;
         this.loading = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.error = true;
         this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
+
+    this.alertService.getBlackouts().subscribe({
+      next: (blackouts) => {
+        this.allBlackouts = blackouts;
         this.cdr.detectChanges();
       }
     });
