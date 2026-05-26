@@ -3,8 +3,8 @@ from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
 
 
-class AlertOverrideDB(SQLModel, table=True):
-    __tablename__ = "alert_overrides"
+class AlertDisabledDB(SQLModel, table=True):
+    __tablename__ = "alert_disabled"
     __table_args__ = {"extend_existing": True}
 
     id: Optional[int] = Field(default=None, primary_key=True)

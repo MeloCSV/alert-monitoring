@@ -23,7 +23,7 @@ export interface Alert {
   alert_type: 'Por Defecto' | 'Ad-hoc';
   cluster: string | null;
   prometheus_name: string | null;
-  is_overridden?: boolean;
+  is_disabled?: boolean;
   is_partial?: boolean;
   chips?: string[];
 }
@@ -68,7 +68,7 @@ export interface DefaultAlertView {
   severity: string | null;
   notification_channel: string | null;
   environments: string[];
-  is_overridden: boolean;
+  is_disabled: boolean;
   is_partial: boolean;
   chips: string[];
 }

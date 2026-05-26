@@ -12,7 +12,7 @@ class DefaultAlertViewResponse(BaseModel):
     severity: Optional[str] = None
     notification_channel: Optional[str] = None
     environments: List[str] = Field(default_factory=lambda: ["pro"])
-    is_overridden: bool = False
+    is_disabled: bool = False
     is_partial: bool = False
     chips: List[str] = Field(default_factory=list)
 
