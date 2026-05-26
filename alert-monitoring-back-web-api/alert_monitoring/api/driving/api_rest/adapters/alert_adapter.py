@@ -105,11 +105,12 @@ def get_default_alerts(
 
 @router.get('/alerts/blackouts', tags=['alerts'], response_model=List[BlackoutResponse], responses=_ERROR_500)
 def get_active_blackouts(
+    solution: Optional[str] = Query(None, description="Filtra los silencios por aplicación"),
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
     logger.info('get_active_blackouts')
-    blackouts = alert_service.get_active_blackouts()
+    blackouts = alert_service.get_active_blackouts(solution)
     payload = [
         BlackoutResponse(
             id=b.id,

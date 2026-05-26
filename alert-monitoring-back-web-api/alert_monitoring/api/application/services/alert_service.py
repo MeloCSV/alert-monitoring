@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List, Optional
 
 from fwkpy_lib_core.common.injector import inject
@@ -146,9 +147,36 @@ class AlertService(AlertServicePort):
         self.logger.info(f'get_alert_overrides solution={solution}')
         return self.override_repository.get_all(solution)
 
-    def get_active_blackouts(self) -> List[Blackout]:
-        self.logger.info('get_active_blackouts')
-        return self.alertmanager_adapter.fetch_active_blackouts()
+    _APP_MATCHER_FIELDS = frozenset({
+        'namespace', 'solucion', 'solution', 'exported_namespace',
+        'backend_target_name', 'deployment', 'replicaset', 'cronjob', 'pod',
+    })
+
+    def _blackout_matches_solution(self, blackout: Blackout, solution: str) -> bool:
+        sol = solution.lower()
+        variants = {sol, f"{sol}-back", f"{sol}-front"}
+        for matcher in blackout.matchers:
+            if matcher.name not in self._APP_MATCHER_FIELDS or not matcher.is_equal:
+                continue
+            if matcher.is_regex:
+                try:
+                    pattern = re.compile(matcher.value, re.IGNORECASE)
+                    if any(pattern.search(v) for v in variants):
+                        return True
+                except re.error:
+                    continue
+            else:
+                val = matcher.value.lower()
+                if val in variants or any(val.startswith(f"{v}-") for v in variants):
+                    return True
+        return False
+
+    def get_active_blackouts(self, solution: Optional[str] = None) -> List[Blackout]:
+        self.logger.info(f'get_active_blackouts solution={solution}')
+        blackouts = self.alertmanager_adapter.fetch_active_blackouts()
+        if solution:
+            blackouts = [b for b in blackouts if self._blackout_matches_solution(b, solution)]
+        return blackouts
 
     def get_default_alerts(self) -> List[DefaultAlert]:
         self.logger.info('get_default_alerts')
