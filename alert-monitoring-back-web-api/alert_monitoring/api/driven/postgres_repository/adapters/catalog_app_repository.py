@@ -28,6 +28,8 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
             for row in self.sqlalchemy_repository.query(CatalogAppDB).all()
         }
 
+        incoming_ids = {app.object_id for app in apps}
+
         for app in apps:
             if app.object_id in existing:
                 row = existing[app.object_id]
@@ -40,6 +42,10 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
                 new_row = self.catalog_app_db_mapper.to_db(app)
                 new_row.synced_at = now
                 self.sqlalchemy_repository.add(new_row)
+
+        for object_id, row in existing.items():
+            if object_id not in incoming_ids:
+                self.sqlalchemy_repository.delete(row)
 
         self.sqlalchemy_repository.commit()
 
