@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List, Optional
 
 from alert_monitoring.api.domain.models.blackout import Blackout, BlackoutMatcher
@@ -15,6 +16,9 @@ class AlertManagerAdapter:
         self.client = client or AlertManagerHttpClient()
 
     def fetch_active_blackouts(self, configs: Optional[List[AlertManagerConfig]] = None) -> List[Blackout]:
+        if os.getenv("ALERTMANAGER_DISABLED", "").lower() in ("1", "true", "yes"):
+            logger.warning("AlertManager deshabilitado (ALERTMANAGER_DISABLED=true) — sin blackouts")
+            return []
         configs = configs if configs is not None else load_alertmanagers_from_env()
         if not configs:
             return []
