@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 
 from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
@@ -8,6 +9,9 @@ from alert_monitoring.api.domain.models.alert_override import AlertOverride
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import DefaultAlertView, SolutionView
 from alert_monitoring.api.driven.shared.alert_normalization import extract_adhoc_chips
+from alert_monitoring.api.driven.shared.timer import log_timer
+
+logger = logging.getLogger(__name__)
 
 
 class GetSolutionViewUseCase:
@@ -22,21 +26,24 @@ class GetSolutionViewUseCase:
         self.default_alert_repository = default_alert_repository
 
     def execute(self, solution: str) -> SolutionView:
-        alerts = [
-            a for a in self.alert_repository.get_all(AlertFilter(solution=solution))
-            if a.solution == solution
-        ]
+        with log_timer(f"solution_view: alert_repository.get_all({solution})"):
+            alerts = [
+                a for a in self.alert_repository.get_all(AlertFilter(solution=solution))
+                if a.solution == solution
+            ]
         channels = sorted({a.notification_channel for a in alerts if a.notification_channel})
 
         adhoc_alerts = [a for a in alerts if a.alert_type == "Ad-hoc"]
         for alert in adhoc_alerts:
             alert.chips = extract_adhoc_chips(alert.condition)
 
-        overrides = {o.alert_name: o for o in self.override_repository.get_all(solution)}
-        default_alerts = [
-            _to_default_view(d, overrides.get(d.raw_name))
-            for d in self.default_alert_repository.get_all()
-        ]
+        with log_timer(f"solution_view: override_repository.get_all({solution})"):
+            overrides = {o.alert_name: o for o in self.override_repository.get_all(solution)}
+        with log_timer("solution_view: default_alert_repository.get_all"):
+            default_alerts = [
+                _to_default_view(d, overrides.get(d.raw_name))
+                for d in self.default_alert_repository.get_all()
+            ]
 
         return SolutionView(
             solution=solution,
