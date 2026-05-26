@@ -50,6 +50,13 @@ export class AlertTableComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+
+    this.alertService.getBlackouts().subscribe({
+      next: (blackouts) => {
+        this.allBlackouts = blackouts;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onSolutionChange(value: string): void {
@@ -68,7 +75,6 @@ export class AlertTableComponent implements OnInit {
     }
 
     this.solutionLoading = true;
-    this.allBlackouts = [];
     this.cdr.detectChanges();
 
     this.alertService.getSolutionView(value).subscribe({
@@ -85,17 +91,27 @@ export class AlertTableComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
-
-    this.alertService.getBlackouts(value).subscribe({
-      next: (blackouts) => {
-        this.allBlackouts = blackouts;
-        this.cdr.detectChanges();
-      }
-    });
   }
 
   get applicationSilences(): Blackout[] {
-    return this.allBlackouts;
+    if (!this.solutionName) return [];
+    const sol = this.solutionName.toLowerCase();
+    const variants = [sol, `${sol}-back`, `${sol}-front`];
+    const appFields = new Set(['namespace', 'solucion', 'solution', 'exported_namespace',
+      'backend_target_name', 'deployment', 'replicaset', 'cronjob', 'pod']);
+    return this.allBlackouts.filter(b =>
+      b.matchers.some(m => {
+        if (!appFields.has(m.name) || !m.is_equal) return false;
+        if (m.is_regex) {
+          try {
+            const re = new RegExp(m.value, 'i');
+            return variants.some(v => re.test(v));
+          } catch { return false; }
+        }
+        const val = m.value.toLowerCase();
+        return variants.some(v => val === v || val.startsWith(`${v}-`));
+      })
+    );
   }
 
   get defaultAlerts(): DefaultAlertView[] {
