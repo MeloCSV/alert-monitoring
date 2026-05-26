@@ -9,7 +9,7 @@ from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
 from alert_monitoring.api.driving.api_rest.models.alert_response import AlertResponse
-from alert_monitoring.api.driving.api_rest.models.alert_override_response import AlertOverrideResponse
+from alert_monitoring.api.driving.api_rest.models.alert_disabled_response import AlertDisabledResponse
 from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse, BlackoutMatcherResponse
 from alert_monitoring.api.driving.api_rest.models.default_alert_response import DefaultAlertResponse
 from alert_monitoring.api.driving.api_rest.models.solution_view_response import DefaultAlertViewResponse, SolutionViewResponse
@@ -80,15 +80,15 @@ def get_all_alerts(
     )
 
 
-@router.get('/alerts/overrides', tags=['alerts'], response_model=List[AlertOverrideResponse], responses=_ERROR_500)
-def get_alert_overrides(
-    solution: Optional[str] = Query(None, description="Filtra los overrides por aplicación"),
+@router.get('/alerts/disabled', tags=['alerts'], response_model=List[AlertDisabledResponse], responses=_ERROR_500)
+def get_alert_disabled(
+    solution: Optional[str] = Query(None, description="Filtra las alertas deshabilitadas por aplicación"),
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
-    logger.info('get_alert_overrides')
-    overrides = alert_service.get_alert_overrides(solution)
-    payload = [AlertOverrideResponse(**o.model_dump()) for o in overrides]
+    logger.info('get_alert_disabled')
+    disabled = alert_service.get_alert_disabled(solution)
+    payload = [AlertDisabledResponse(**o.model_dump()) for o in disabled]
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
 
 

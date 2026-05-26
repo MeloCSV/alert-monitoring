@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class AlertOverrideResponse(BaseModel):
+class AlertDisabledResponse(BaseModel):
     alert_name: str
     solution: str
     is_disabled: bool

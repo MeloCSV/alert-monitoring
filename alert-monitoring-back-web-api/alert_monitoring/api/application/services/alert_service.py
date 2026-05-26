@@ -6,12 +6,12 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
-from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
+from alert_monitoring.api.application.ports.driven.alert_disabled_repository_port import AlertDisabledRepositoryPort
 from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
 from alert_monitoring.api.application.use_cases.get_solution_view_use_case import GetSolutionViewUseCase
-from alert_monitoring.api.application.use_cases.recompute_overrides_use_case import RecomputeOverridesUseCase, build_exclusion_updates
+from alert_monitoring.api.application.use_cases.recompute_disabled_use_case import RecomputeDisabledUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
 from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY
 from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
@@ -22,7 +22,7 @@ from alert_monitoring.api.driven.prometheus_repository.adapters.prometheus_adapt
 from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
-from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import SolutionView
@@ -34,22 +34,22 @@ class AlertService(AlertServicePort):
     def __init__(
         self,
         alert_repository: AlertRepositoryPort,
-        alert_override_repository: AlertOverrideRepositoryPort,
+        alert_disabled_repository: AlertDisabledRepositoryPort,
         catalog_app_repository: CatalogAppRepositoryPort,
         default_alert_repository: DefaultAlertRepositoryPort,
         logger: LoggerSetup,
     ):
         self.alert_repository = alert_repository
-        self.override_repository = alert_override_repository
+        self.disabled_repository = alert_disabled_repository
         self.catalog_app_repository = catalog_app_repository
         self.default_alert_repository = default_alert_repository
         self.save_use_case = SaveAlertsUseCase(alert_repository)
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
-        self.recompute_overrides_use_case = RecomputeOverridesUseCase(
-            alert_repository, alert_override_repository, default_alert_repository
+        self.recompute_disabled_use_case = RecomputeDisabledUseCase(
+            alert_repository, alert_disabled_repository, default_alert_repository
         )
         self.get_solution_view_use_case = GetSolutionViewUseCase(
-            alert_repository, alert_override_repository, default_alert_repository
+            alert_repository, alert_disabled_repository, default_alert_repository
         )
         self.prometheus_adapter = PrometheusAdapter()
         self.prometheus_mapper = PrometheusMapper()
@@ -124,7 +124,7 @@ class AlertService(AlertServicePort):
         self.alert_repository.delete_by_source_tool("Prometheus")
         self.save_use_case.execute(adhoc_alerts)
         self._upsert_default_alerts(default_rules)
-        self.recompute_overrides_use_case.execute()
+        self.recompute_disabled_use_case.execute()
         return len(alerts)
 
     def sync_elastic_alerts(self) -> int:
@@ -136,16 +136,16 @@ class AlertService(AlertServicePort):
         self._normalize_solutions(alerts, catalog_lookup)
         self.alert_repository.delete_by_source_tool("Elastic")
         self.save_use_case.execute(alerts)
-        self.recompute_overrides_use_case.execute()
+        self.recompute_disabled_use_case.execute()
         return len(alerts)
 
     def get_all_alerts(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
         self.logger.info('get_all_alerts')
         return self.get_all_use_case.execute(filters)
 
-    def get_alert_overrides(self, solution: Optional[str] = None) -> List[AlertOverride]:
-        self.logger.info(f'get_alert_overrides solution={solution}')
-        return self.override_repository.get_all(solution)
+    def get_alert_disabled(self, solution: Optional[str] = None) -> List[AlertDisabled]:
+        self.logger.info(f'get_alert_disabled solution={solution}')
+        return self.disabled_repository.get_all(solution)
 
     _APP_MATCHER_FIELDS = frozenset({
         'namespace', 'solucion', 'solution', 'exported_namespace',

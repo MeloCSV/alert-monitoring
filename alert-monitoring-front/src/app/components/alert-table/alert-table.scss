@@ -414,7 +414,7 @@
   line-height: 1.35;
 }
 
-.overridden-tag {
+.disabled-tag {
   display: inline-block;
   margin-top: 6px;
   background: #ffd6d6;
@@ -428,7 +428,7 @@
   letter-spacing: 0.4px;
 }
 
-tr.overridden {
+tr.disabled {
   background: rgba(179, 38, 30, 0.04);
 
   td { color: #98a2b3; }

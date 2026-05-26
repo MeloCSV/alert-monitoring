@@ -1,10 +1,10 @@
 from collections import defaultdict
 from typing import List, Set, Tuple
 
-from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
+from alert_monitoring.api.application.ports.driven.alert_disabled_repository_port import AlertDisabledRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
-from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.driven.shared.alert_normalization import (
     NAMESPACE_LABEL_KEYS,
@@ -13,15 +13,15 @@ from alert_monitoring.api.driven.shared.alert_normalization import (
 )
 
 
-class RecomputeOverridesUseCase:
+class RecomputeDisabledUseCase:
     def __init__(
         self,
         alert_repository: AlertRepositoryPort,
-        override_repository: AlertOverrideRepositoryPort,
+        disabled_repository: AlertDisabledRepositoryPort,
         default_alert_repository: DefaultAlertRepositoryPort,
     ):
         self.alert_repository = alert_repository
-        self.override_repository = override_repository
+        self.disabled_repository = disabled_repository
         self.default_alert_repository = default_alert_repository
 
     def execute(self) -> int:
@@ -36,14 +36,14 @@ class RecomputeOverridesUseCase:
         solutions = sorted(solution_micros.keys())
         default_alerts = self.default_alert_repository.get_all()
 
-        overrides: List[AlertOverride] = []
+        disabled_alerts: List[AlertDisabled] = []
         for default_alert in default_alerts:
             for sol in solutions:
                 micros = solution_micros[sol]
                 is_disabled, is_partial, excluded_items = _evaluate(default_alert, sol, micros)
                 if not (is_disabled or is_partial or excluded_items):
                     continue
-                overrides.append(AlertOverride(
+                disabled_alerts.append(AlertDisabled(
                     alert_name=default_alert.raw_name,
                     solution=sol,
                     is_disabled=is_disabled,
@@ -51,8 +51,8 @@ class RecomputeOverridesUseCase:
                     excluded_items=excluded_items,
                 ))
 
-        self.override_repository.replace_all(overrides)
-        return len(overrides)
+        self.disabled_repository.replace_all(disabled_alerts)
+        return len(disabled_alerts)
 
 
 def _evaluate(default_alert: DefaultAlert, solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:

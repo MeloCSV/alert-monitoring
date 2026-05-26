@@ -1,10 +1,10 @@
 from typing import List, Optional
 
-from alert_monitoring.api.application.ports.driven.alert_override_repository_port import AlertOverrideRepositoryPort
+from alert_monitoring.api.application.ports.driven.alert_disabled_repository_port import AlertDisabledRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
-from alert_monitoring.api.domain.models.alert_override import AlertOverride
+from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import DefaultAlertView, SolutionView
 from alert_monitoring.api.driven.shared.alert_normalization import extract_adhoc_chips
@@ -14,11 +14,11 @@ class GetSolutionViewUseCase:
     def __init__(
         self,
         alert_repository: AlertRepositoryPort,
-        override_repository: AlertOverrideRepositoryPort,
+        disabled_repository: AlertDisabledRepositoryPort,
         default_alert_repository: DefaultAlertRepositoryPort,
     ):
         self.alert_repository = alert_repository
-        self.override_repository = override_repository
+        self.disabled_repository = disabled_repository
         self.default_alert_repository = default_alert_repository
 
     def execute(self, solution: str) -> SolutionView:
@@ -32,9 +32,9 @@ class GetSolutionViewUseCase:
         for alert in adhoc_alerts:
             alert.chips = extract_adhoc_chips(alert.condition)
 
-        overrides = {o.alert_name: o for o in self.override_repository.get_all(solution)}
+        disabled_map = {o.alert_name: o for o in self.disabled_repository.get_all(solution)}
         default_alerts = [
-            _to_default_view(d, overrides.get(d.raw_name))
+            _to_default_view(d, disabled_map.get(d.raw_name))
             for d in self.default_alert_repository.get_all()
         ]
 
@@ -46,10 +46,10 @@ class GetSolutionViewUseCase:
         )
 
 
-def _to_default_view(default_alert: DefaultAlert, override: Optional[AlertOverride]) -> DefaultAlertView:
-    is_overridden = bool(override and override.is_disabled)
-    is_partial = bool(override and not override.is_disabled and override.is_partial)
-    chips = [] if not override or override.is_disabled else override.excluded_items
+def _to_default_view(default_alert: DefaultAlert, alert_disabled: Optional[AlertDisabled]) -> DefaultAlertView:
+    is_disabled = bool(alert_disabled and alert_disabled.is_disabled)
+    is_partial = bool(alert_disabled and not alert_disabled.is_disabled and alert_disabled.is_partial)
+    chips = [] if not alert_disabled or alert_disabled.is_disabled else alert_disabled.excluded_items
     return DefaultAlertView(
         raw_name=default_alert.raw_name,
         name=default_alert.display_name,
@@ -57,7 +57,7 @@ def _to_default_view(default_alert: DefaultAlert, override: Optional[AlertOverri
         severity=default_alert.severity,
         notification_channel=default_alert.notification_channel,
         environments=["pro"],
-        is_overridden=is_overridden,
+        is_disabled=is_disabled,
         is_partial=is_partial,
         chips=chips,
     )
