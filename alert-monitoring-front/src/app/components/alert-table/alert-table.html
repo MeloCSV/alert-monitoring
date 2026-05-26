@@ -159,18 +159,18 @@
                   </thead>
                   <tbody>
                     @for (alert of defaultAlerts; track alert.raw_name) {
-                      <tr [class.overridden]="alert.is_overridden" [class.partial]="alert.is_partial">
+                      <tr [class.disabled]="alert.is_disabled" [class.partial]="alert.is_partial">
                         <td>
                           <div class="alert-name">{{ alert.name }}</div>
                           @if (alert.description) {
                             <div class="alert-desc">{{ alert.description }}</div>
                           }
-                          @if (alert.is_overridden) {
-                            <span class="overridden-tag">Deshabilitada</span>
+                          @if (alert.is_disabled) {
+                            <span class="disabled-tag">Deshabilitada</span>
                           } @else if (alert.is_partial) {
                             <span class="partial-tag">Alarmado parcialmente</span>
                           }
-                          @if (!alert.is_overridden && alert.chips && alert.chips.length) {
+                          @if (!alert.is_disabled && alert.chips && alert.chips.length) {
                             <div class="chip-list">
                               @for (chip of alert.chips; track chip) {
                                 <span class="chip chip-excluded" title="Excluido del alarmado por defecto">{{ chip }}</span>

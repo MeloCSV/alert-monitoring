@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class AlertOverride(BaseModel):
+class AlertDisabled(BaseModel):
     alert_name: str = Field(..., description="Nombre de la alerta Por Defecto")
     solution: str = Field(..., description="Aplicación para la que se evalúa la alerta")
     is_disabled: bool = Field(
