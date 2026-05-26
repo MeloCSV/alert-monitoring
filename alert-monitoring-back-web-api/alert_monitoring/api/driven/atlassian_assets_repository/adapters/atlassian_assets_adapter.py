@@ -38,6 +38,10 @@ class AtlassianAssetsAdapter:
             csw_code = self.client.extract_attribute(attributes, ATTR_CSW_CODE)
             platform = self.client.extract_attribute(attributes, ATTR_PLATFORM)
 
+            if not platform:
+                logger.debug("Aplicación '%s' sin plataforma (legacy), ignorada.", name)
+                continue
+
             apps.append(CatalogApp(
                 object_id=str(object_id),
                 object_key=object_key or "",
