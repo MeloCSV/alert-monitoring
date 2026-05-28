@@ -278,19 +278,9 @@
 }
 
 tr.disabled {
-  background: rgba(179, 38, 30, 0.04);
+  background: rgba(179, 38, 30, 0.08);
 
-  td { color: #98a2b3; }
-
-  .alert-name,
-  .alert-desc {
-    text-decoration: line-through;
-    text-decoration-color: #b3261e;
-    text-decoration-thickness: 1.5px;
-    color: #98a2b3;
-  }
-
-  &:hover { background: rgba(179, 38, 30, 0.07); }
+  &:hover { background: rgba(179, 38, 30, 0.13); }
 }
 
 /* ---------- Chips ---------- */
@@ -332,7 +322,7 @@ tr.disabled {
   color: #1a1a2e;
 
   &.muted { color: #98a2b3; font-style: italic; }
-  &.disabled-api { color: #b3261e; text-decoration: line-through; text-decoration-color: #b3261e; }
+  &.disabled-api { color: #b3261e; }
 }
 
 /* ---------- Severity ---------- */
@@ -355,5 +345,5 @@ tr.disabled {
 
 .severity-critical { background: #ffd6d6; color: #b3261e; border-color: #f4b2b0; }
 .severity-warning { background: #fff4cc; color: #7a5f00; border-color: #f0d97a; }
-.severity-principal { background: #ecebf7; color: #2e2a86; border-color: #c5c2e8; }
+.severity-principal { background: #fff4e0; color: #c05200; border-color: #f5c178; }
 .severity-unknown { background: #e4e7ec; color: #4d4d4d; border-color: #c9ced6; }

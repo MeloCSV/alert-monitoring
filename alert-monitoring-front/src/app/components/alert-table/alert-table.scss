@@ -315,6 +315,32 @@
   color: #8a8a8a;
 }
 
+.silence-source {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e4e7ec;
+  color: #4d4d4d;
+  border: 1px solid #c9ced6;
+  margin-left: auto;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  &.silence-source-openshift {
+    background: #fde8e8;
+    color: #9b1c1c;
+    border-color: #f5c2c2;
+  }
+
+  &.silence-source-gcp {
+    background: #e8f0fe;
+    color: #1a5faa;
+    border-color: #a8c7fa;
+  }
+}
+
 /* ---------- Panels ---------- */
 
 .panels {
@@ -358,8 +384,8 @@
   }
 
   &.adhoc-header {
-    background: #ecebf7;
-    h2 { color: #2e2a86; }
+    background: #fff4e0;
+    h2 { color: #c05200; }
   }
 }
 
@@ -429,19 +455,9 @@
 }
 
 tr.disabled {
-  background: rgba(179, 38, 30, 0.04);
+  background: rgba(179, 38, 30, 0.08);
 
-  td { color: #98a2b3; }
-
-  .alert-name,
-  .alert-desc {
-    text-decoration: line-through;
-    text-decoration-color: #b3261e;
-    text-decoration-thickness: 1.5px;
-    color: #98a2b3;
-  }
-
-  &:hover { background: rgba(179, 38, 30, 0.07); }
+  &:hover { background: rgba(179, 38, 30, 0.13); }
 }
 
 .partial-tag {
@@ -522,9 +538,9 @@ tr.partial {
 }
 
 .severity-principal {
-  background: #ecebf7;
-  color: #2e2a86;
-  border-color: #c5c2e8;
+  background: #fff4e0;
+  color: #c05200;
+  border-color: #f5c178;
 }
 
 .severity-unknown {

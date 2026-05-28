@@ -42,6 +42,7 @@ export interface Blackout {
   ends_at?: string | null;
   created_by?: string | null;
   comment?: string | null;
+  source?: string | null;
 }
 
 export interface KibanaRule {

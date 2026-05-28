@@ -18,3 +18,4 @@ class Blackout(BaseModel):
     created_by: Optional[str] = None
     comment: Optional[str] = None
     state: str = "active"
+    source: Optional[str] = None
