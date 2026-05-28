@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertService, Alert, Blackout, DefaultAlertView } from '../../services/alert';
+import { forkJoin } from 'rxjs';
+import { AlertService, Alert, Blackout, DefaultAlertView, KibanaRule } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -14,50 +15,76 @@ type SeverityFilter = '' | 'warning' | 'principal' | 'critical';
   styleUrl: './alert-table.scss'
 })
 export class AlertTableComponent implements OnInit {
-  solutionOptions: string[] = [];
+  @Input() mode: 'apps' | 'apis' = 'apps';
 
+  // Apps state
+  solutionOptions: string[] = [];
   private adhocData: Alert[] = [];
   private defaultData: DefaultAlertView[] = [];
   private allBlackouts: Blackout[] = [];
   channels: string[] = [];
-
-  loading = true;
-  error = false;
   solutionLoading = false;
   solutionError = false;
-
   solutionName = '';
-
+  showSilences = false;
   environment: EnvironmentFilter = '';
+
+  // APIs state
+  rules: KibanaRule[] = [];
+  apiOptions: string[] = [];
+  selectedApi = '';
+
+  // Shared state
+  loading = true;
+  error = false;
   channel = '';
   severity: SeverityFilter = '';
-
   showOptionalFilters = false;
-  showSilences = false;
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.alertService.getCatalogApps().subscribe({
-      next: (apps) => {
-        this.solutionOptions = apps.map(a => a.name);
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.error = true;
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    if (this.mode === 'apps') {
+      this.alertService.getCatalogApps().subscribe({
+        next: (apps) => {
+          this.solutionOptions = apps.map(a => a.name);
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = true;
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
+      });
 
-    this.alertService.getBlackouts().subscribe({
-      next: (blackouts) => {
-        this.allBlackouts = blackouts;
-        this.cdr.detectChanges();
-      }
-    });
+      this.alertService.getBlackouts().subscribe({
+        next: (blackouts) => {
+          this.allBlackouts = blackouts;
+          this.cdr.detectChanges();
+        }
+      });
+    } else {
+      forkJoin({
+        rules: this.alertService.getKibanaRules(),
+        apis: this.alertService.getKibanaRuleApis(),
+      }).subscribe({
+        next: ({ rules, apis }) => {
+          this.rules = rules;
+          this.apiOptions = apis;
+          this.loading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = true;
+          this.loading = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
+
+  // Apps methods
 
   onSolutionChange(value: string): void {
     this.solutionName = value;
@@ -122,10 +149,6 @@ export class AlertTableComponent implements OnInit {
     return this.adhocData.filter(alert => this.passesCommonFilters(alert));
   }
 
-  get channelOptions(): string[] {
-    return this.channels;
-  }
-
   get hasSolutionSelected(): boolean {
     return !!this.solutionName;
   }
@@ -158,6 +181,63 @@ export class AlertTableComponent implements OnInit {
     return isEqual ? '=' : '!=';
   }
 
+  environmentsLabel(envs: string[]): string {
+    return envs && envs.length ? envs.join(', ') : '-';
+  }
+
+  // APIs methods
+
+  onApiChange(value: string): void {
+    this.selectedApi = value;
+    this.cdr.detectChanges();
+  }
+
+  get globalRules(): KibanaRule[] {
+    return this.rules.filter(r => r.is_global && r.enabled && this.passesApiFilters(r));
+  }
+
+  get apiRules(): KibanaRule[] {
+    if (!this.selectedApi) return [];
+    const api = this.selectedApi.toLowerCase();
+    return this.rules.filter(
+      r => !r.is_global && r.enabled &&
+        r.apis.some(a => a.toLowerCase() === api) &&
+        this.passesApiFilters(r)
+    );
+  }
+
+  get channelOptions(): string[] {
+    if (this.mode === 'apis') {
+      const seen = new Set<string>();
+      for (const r of this.rules) {
+        for (const ch of r.notification_channels) {
+          seen.add(ch);
+        }
+      }
+      return Array.from(seen).sort();
+    }
+    return this.channels;
+  }
+
+  isDisabledForApi(rule: KibanaRule, api: string): boolean {
+    return rule.disabled_apis.some(a => a.toLowerCase() === api.toLowerCase());
+  }
+
+  channelLabel(rule: KibanaRule): string {
+    return rule.notification_channels.length ? rule.notification_channels.join(', ') : '-';
+  }
+
+  private passesApiFilters(rule: KibanaRule): boolean {
+    if (this.channel) {
+      const ch = this.channel.toLowerCase();
+      if (!rule.notification_channels.some(c => c.toLowerCase() === ch)) return false;
+    }
+    if (this.severity && (rule.severity || '').toLowerCase() !== this.severity) return false;
+    return true;
+  }
+
+  // Shared methods
+
   toggleOptionalFilters(): void {
     this.showOptionalFilters = !this.showOptionalFilters;
   }
@@ -166,9 +246,5 @@ export class AlertTableComponent implements OnInit {
     this.environment = '';
     this.channel = '';
     this.severity = '';
-  }
-
-  environmentsLabel(envs: string[]): string {
-    return envs && envs.length ? envs.join(', ') : '-';
   }
 }

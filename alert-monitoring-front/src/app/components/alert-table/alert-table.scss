@@ -136,11 +136,15 @@
 .filters-optional {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 14px 16px;
   align-items: end;
 
-  @media (max-width: 1100px) { grid-template-columns: 1fr 1fr; }
+  &.has-env {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    @media (max-width: 1100px) { grid-template-columns: 1fr 1fr; }
+  }
+
   @media (max-width: 600px) { grid-template-columns: 1fr; }
 }
 
@@ -519,6 +523,21 @@ tr.partial {
   background: #e8f3ec;
   color: #1f4a2b;
   border-color: #b9dcc6;
+}
+
+.chip-api {
+  background: #e8f3ec;
+  color: #1f4a2b;
+  border-color: #b9dcc6;
+}
+
+.api-name {
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #1a1a2e;
+
+  &.muted { color: #98a2b3; font-style: italic; }
+  &.disabled-api { color: #b3261e; }
 }
 
 .severity-cell {

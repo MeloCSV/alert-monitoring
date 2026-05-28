@@ -1,8 +1,13 @@
 <div class="page">
   <div class="card">
     <header class="card-header">
-      <h1>Alarmado de Aplicaciones</h1>
-      <p class="subtitle">Selecciona tu aplicación para ver todo el alarmado asociado.</p>
+      @if (mode === 'apps') {
+        <h1>Alarmado de Aplicaciones</h1>
+        <p class="subtitle">Selecciona tu aplicación para ver todo el alarmado asociado.</p>
+      } @else {
+        <h1>Alarmado de APIs</h1>
+        <p class="subtitle">Selecciona tu Aplicación para ver todo el alarmado de las APIs que produces.</p>
+      }
     </header>
 
     <div class="severity-legend">
@@ -23,40 +28,54 @@
 
     <section class="filters">
       <div class="filters-mandatory">
-        <div class="filter solution-filter">
-          <label>Aplicación <span class="required">*</span></label>
-          <app-searchable-select
-            [options]="solutionOptions"
-            placeholder="Selecciona una aplicación"
-            [value]="solutionName"
-            (valueChange)="onSolutionChange($event)"
-          ></app-searchable-select>
-        </div>
+        @if (mode === 'apps') {
+          <div class="filter solution-filter">
+            <label>Aplicación <span class="required">*</span></label>
+            <app-searchable-select
+              [options]="solutionOptions"
+              placeholder="Selecciona una aplicación"
+              [value]="solutionName"
+              (valueChange)="onSolutionChange($event)"
+            ></app-searchable-select>
+          </div>
+        } @else {
+          <div class="filter solution-filter">
+            <label>API</label>
+            <app-searchable-select
+              [options]="apiOptions"
+              placeholder="Selecciona una API"
+              [value]="selectedApi"
+              (valueChange)="onApiChange($event)"
+            ></app-searchable-select>
+          </div>
+        }
 
         <button
           type="button"
           class="optional-toggle"
           (click)="toggleOptionalFilters()"
           [class.open]="showOptionalFilters"
-          [disabled]="!hasSolutionSelected"
+          [disabled]="mode === 'apps' && !hasSolutionSelected"
         >
           <span class="chevron" aria-hidden="true">▾</span>
           Filtros
         </button>
       </div>
 
-      @if (showOptionalFilters && hasSolutionSelected) {
-        <div class="filters-optional">
-          <div class="filter">
-            <label>Entorno</label>
-            <select [(ngModel)]="environment" class="select">
-              <option value="">Todos los entornos</option>
-              <option value="dev">Dev</option>
-              <option value="itg">Itg</option>
-              <option value="pre">Pre</option>
-              <option value="pro">Pro</option>
-            </select>
-          </div>
+      @if (showOptionalFilters && (mode === 'apis' || hasSolutionSelected)) {
+        <div class="filters-optional" [class.has-env]="mode === 'apps'">
+          @if (mode === 'apps') {
+            <div class="filter">
+              <label>Entorno</label>
+              <select [(ngModel)]="environment" class="select">
+                <option value="">Todos los entornos</option>
+                <option value="dev">Dev</option>
+                <option value="itg">Itg</option>
+                <option value="pre">Pre</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+          }
 
           <div class="filter">
             <label>Canal</label>
@@ -87,162 +106,278 @@
 
     <section class="results">
       @if (loading) {
-        <div class="state loading">Cargando aplicaciones...</div>
+        <div class="state loading">{{ mode === 'apps' ? 'Cargando aplicaciones...' : 'Cargando reglas...' }}</div>
       }
       @if (!loading && error) {
-        <div class="state error">Error al cargar el catálogo de aplicaciones.</div>
+        <div class="state error">{{ mode === 'apps' ? 'Error al cargar el catálogo de aplicaciones.' : 'Error al cargar las reglas de Kibana.' }}</div>
       }
-      @if (!loading && !error && !hasSolutionSelected) {
-        <div class="state empty-select">
-          Selecciona una aplicación para visualizar sus alarmas.
-        </div>
-      }
-      @if (!loading && !error && hasSolutionSelected && solutionLoading) {
-        <div class="state loading">Cargando alertas...</div>
-      }
-      @if (!loading && !error && hasSolutionSelected && !solutionLoading && solutionError) {
-        <div class="state error">Error al cargar las alertas.</div>
-      }
-      @if (!loading && !error && hasSolutionSelected && !solutionLoading && !solutionError) {
 
-        @if (applicationSilences.length > 0) {
-          <div class="silences-section">
-            <button type="button" class="silences-toggle" (click)="toggleSilences()" [class.open]="showSilences">
-              <span class="chevron" aria-hidden="true">▾</span>
-              Silencios configurados en AlertManager
-              <span class="silence-count">{{ applicationSilences.length }}</span>
-            </button>
-            @if (showSilences) {
-              <div class="silences-list">
-                @for (silence of applicationSilences; track silence.id) {
-                  <div class="silence-card">
-                    <div class="silence-matchers">
-                      @for (m of silence.matchers; track m.name + m.value) {
-                        <span class="matcher-chip" [class.matcher-regex]="m.is_regex" [class.matcher-negation]="!m.is_equal">
-                          <span class="matcher-name">{{ m.name }}</span><span class="matcher-op">{{ matcherOperator(m.is_regex, m.is_equal) }}</span><span class="matcher-val">{{ m.value }}</span>
-                        </span>
-                      }
-                    </div>
-                    <div class="silence-meta">
-                      @if (silence.comment) {
-                        <p class="silence-comment" [title]="silence.comment">{{ silence.comment }}</p>
-                      }
-                      <div class="silence-footer">
-                        <span class="silence-until">Válido hasta <strong>{{ formatSilenceDate(silence.ends_at) }}</strong></span>
-                        @if (silence.source) {
-                          <span class="silence-source"
-                            [class.silence-source-openshift]="silence.source.toLowerCase().includes('openshift')"
-                            [class.silence-source-gcp]="silence.source.toLowerCase().includes('gcp')">{{ silence.source }}</span>
+      @if (mode === 'apps') {
+        @if (!loading && !error && !hasSolutionSelected) {
+          <div class="state empty-select">
+            Selecciona una aplicación para visualizar sus alarmas.
+          </div>
+        }
+        @if (!loading && !error && hasSolutionSelected && solutionLoading) {
+          <div class="state loading">Cargando alertas...</div>
+        }
+        @if (!loading && !error && hasSolutionSelected && !solutionLoading && solutionError) {
+          <div class="state error">Error al cargar las alertas.</div>
+        }
+        @if (!loading && !error && hasSolutionSelected && !solutionLoading && !solutionError) {
+
+          @if (applicationSilences.length > 0) {
+            <div class="silences-section">
+              <button type="button" class="silences-toggle" (click)="toggleSilences()" [class.open]="showSilences">
+                <span class="chevron" aria-hidden="true">▾</span>
+                Silencios configurados en AlertManager
+                <span class="silence-count">{{ applicationSilences.length }}</span>
+              </button>
+              @if (showSilences) {
+                <div class="silences-list">
+                  @for (silence of applicationSilences; track silence.id) {
+                    <div class="silence-card">
+                      <div class="silence-matchers">
+                        @for (m of silence.matchers; track m.name + m.value) {
+                          <span class="matcher-chip" [class.matcher-regex]="m.is_regex" [class.matcher-negation]="!m.is_equal">
+                            <span class="matcher-name">{{ m.name }}</span><span class="matcher-op">{{ matcherOperator(m.is_regex, m.is_equal) }}</span><span class="matcher-val">{{ m.value }}</span>
+                          </span>
                         }
                       </div>
+                      <div class="silence-meta">
+                        @if (silence.comment) {
+                          <p class="silence-comment" [title]="silence.comment">{{ silence.comment }}</p>
+                        }
+                        <div class="silence-footer">
+                          <span class="silence-until">Válido hasta <strong>{{ formatSilenceDate(silence.ends_at) }}</strong></span>
+                          @if (silence.source) {
+                            <span class="silence-source"
+                              [class.silence-source-openshift]="silence.source.toLowerCase().includes('openshift')"
+                              [class.silence-source-gcp]="silence.source.toLowerCase().includes('gcp')">{{ silence.source }}</span>
+                          }
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <div class="panels">
+            <div class="panel">
+              <div class="panel-header default-header">
+                <h2>Alarmas por defecto</h2>
+                <span class="count">{{ defaultAlerts.length }}</span>
+              </div>
+              <div class="panel-body">
+                @if (defaultAlerts.length === 0) {
+                  <div class="empty-panel">No hay alarmas por defecto.</div>
+                } @else {
+                  <table class="alert-table">
+                    <thead>
+                      <tr>
+                        <th>Alarma</th>
+                        <th>Canal de salida</th>
+                        <th>Severidad</th>
+                        <th>Entorno</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (alert of defaultAlerts; track alert.raw_name) {
+                        <tr [class.disabled]="alert.is_disabled" [class.partial]="alert.is_partial">
+                          <td>
+                            <div class="alert-name">{{ alert.name }}</div>
+                            @if (alert.description) {
+                              <div class="alert-desc">{{ alert.description }}</div>
+                            }
+                            @if (alert.is_disabled) {
+                              <span class="disabled-tag">Deshabilitada</span>
+                            } @else if (alert.is_partial) {
+                              <span class="partial-tag">Alarmado parcialmente</span>
+                            }
+                            @if (!alert.is_disabled && alert.chips && alert.chips.length) {
+                              <div class="chip-list">
+                                @for (chip of alert.chips; track chip) {
+                                  <span class="chip chip-excluded" title="Excluido del alarmado por defecto">{{ chip }}</span>
+                                }
+                              </div>
+                            }
+                          </td>
+                          <td>{{ alert.notification_channel || '-' }}</td>
+                          <td class="severity-cell">
+                            <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
+                          </td>
+                          <td>{{ environmentsLabel(alert.environments) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
                 }
               </div>
-            }
+            </div>
+
+            <div class="panel">
+              <div class="panel-header adhoc-header">
+                <h2>Alarmas ad hoc</h2>
+                <span class="count">{{ adhocAlerts.length }}</span>
+              </div>
+              <div class="panel-body">
+                @if (adhocAlerts.length === 0) {
+                  <div class="empty-panel">No hay alarmas ad hoc.</div>
+                } @else {
+                  <table class="alert-table">
+                    <thead>
+                      <tr>
+                        <th>Alarma</th>
+                        <th>Canal de salida</th>
+                        <th>Severidad</th>
+                        <th>Entorno</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (alert of adhocAlerts; track alert.name + '-' + alert.condition) {
+                        <tr>
+                          <td>
+                            <div class="alert-name">{{ alert.name }}</div>
+                            @if (alert.description) {
+                              <div class="alert-desc">{{ alert.description }}</div>
+                            }
+                            @if (alert.chips && alert.chips.length) {
+                              <div class="chip-list">
+                                @for (chip of alert.chips; track chip) {
+                                  <span class="chip chip-adhoc" title="Job o namespace alarmado">{{ chip }}</span>
+                                }
+                              </div>
+                            }
+                          </td>
+                          <td>{{ alert.notification_channel || '-' }}</td>
+                          <td class="severity-cell">
+                            <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
+                          </td>
+                          <td>{{ environmentsLabel(alert.environments) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            </div>
           </div>
         }
 
-        <div class="panels">
-          <div class="panel">
-            <div class="panel-header default-header">
-              <h2>Alarmas por defecto</h2>
-              <span class="count">{{ defaultAlerts.length }}</span>
-            </div>
-            <div class="panel-body">
-              @if (defaultAlerts.length === 0) {
-                <div class="empty-panel">No hay alarmas por defecto.</div>
-              } @else {
-                <table class="alert-table">
-                  <thead>
-                    <tr>
-                      <th>Alarma</th>
-                      <th>Canal de salida</th>
-                      <th>Severidad</th>
-                      <th>Entorno</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (alert of defaultAlerts; track alert.raw_name) {
-                      <tr [class.disabled]="alert.is_disabled" [class.partial]="alert.is_partial">
-                        <td>
-                          <div class="alert-name">{{ alert.name }}</div>
-                          @if (alert.description) {
-                            <div class="alert-desc">{{ alert.description }}</div>
-                          }
-                          @if (alert.is_disabled) {
-                            <span class="disabled-tag">Deshabilitada</span>
-                          } @else if (alert.is_partial) {
-                            <span class="partial-tag">Alarmado parcialmente</span>
-                          }
-                          @if (!alert.is_disabled && alert.chips && alert.chips.length) {
-                            <div class="chip-list">
-                              @for (chip of alert.chips; track chip) {
-                                <span class="chip chip-excluded" title="Excluido del alarmado por defecto">{{ chip }}</span>
-                              }
-                            </div>
-                          }
-                        </td>
-                        <td>{{ alert.notification_channel || '-' }}</td>
-                        <td class="severity-cell">
-                          <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
-                        </td>
-                        <td>{{ environmentsLabel(alert.environments) }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              }
-            </div>
-          </div>
+      } @else {
 
-          <div class="panel">
-            <div class="panel-header adhoc-header">
-              <h2>Alarmas ad hoc</h2>
-              <span class="count">{{ adhocAlerts.length }}</span>
-            </div>
-            <div class="panel-body">
-              @if (adhocAlerts.length === 0) {
-                <div class="empty-panel">No hay alarmas ad hoc.</div>
-              } @else {
-                <table class="alert-table">
-                  <thead>
-                    <tr>
-                      <th>Alarma</th>
-                      <th>Canal de salida</th>
-                      <th>Severidad</th>
-                      <th>Entorno</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (alert of adhocAlerts; track alert.name + '-' + alert.condition) {
+        @if (!loading && !error) {
+          <div class="panels">
+            <div class="panel">
+              <div class="panel-header default-header">
+                <h2>Alarmas por defecto</h2>
+                <span class="count">{{ globalRules.length }}</span>
+              </div>
+              <div class="panel-body">
+                @if (globalRules.length === 0) {
+                  <div class="empty-panel">No hay alarmas globales.</div>
+                } @else {
+                  <table class="alert-table">
+                    <thead>
                       <tr>
-                        <td>
-                          <div class="alert-name">{{ alert.name }}</div>
-                          @if (alert.description) {
-                            <div class="alert-desc">{{ alert.description }}</div>
-                          }
-                          @if (alert.chips && alert.chips.length) {
+                        <th>Alarma</th>
+                        <th>Canal de salida</th>
+                        <th>Severidad</th>
+                        <th>Nombre de API</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (rule of globalRules; track rule.rule_id) {
+                        @let disabled = selectedApi && isDisabledForApi(rule, selectedApi);
+                        <tr [class.disabled]="disabled">
+                          <td>
+                            <div class="alert-name">{{ rule.name }}</div>
+                            @if (rule.message) {
+                              <div class="alert-desc">{{ rule.message }}</div>
+                            }
+                            @if (disabled) {
+                              <span class="disabled-tag">Deshabilitada</span>
+                            }
+                            @if (!disabled && selectedApi && rule.disabled_apis.length) {
+                              <div class="chip-list">
+                                @for (api of rule.disabled_apis; track api) {
+                                  <span class="chip chip-excluded" title="API excluida de esta alarma global">{{ api }}</span>
+                                }
+                              </div>
+                            }
+                          </td>
+                          <td>{{ channelLabel(rule) }}</td>
+                          <td class="severity-cell">
+                            <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                          </td>
+                          <td>
+                            @if (disabled) {
+                              <span class="api-name disabled-api">{{ selectedApi }}</span>
+                            } @else if (selectedApi) {
+                              <span class="api-name">{{ selectedApi }}</span>
+                            } @else {
+                              <span class="api-name muted">Global</span>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header adhoc-header">
+                <h2>Alarmas ad-hoc</h2>
+                <span class="count">{{ apiRules.length }}</span>
+              </div>
+              <div class="panel-body">
+                @if (!selectedApi) {
+                  <div class="empty-panel">Selecciona una API para ver sus reglas.</div>
+                } @else if (apiRules.length === 0) {
+                  <div class="empty-panel">No hay reglas ad-hoc para esta API.</div>
+                } @else {
+                  <table class="alert-table">
+                    <thead>
+                      <tr>
+                        <th>Alarma</th>
+                        <th>Canal de salida</th>
+                        <th>Severidad</th>
+                        <th>Nombre de API</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (rule of apiRules; track rule.rule_id) {
+                        <tr>
+                          <td>
+                            <div class="alert-name">{{ rule.name }}</div>
+                            @if (rule.message) {
+                              <div class="alert-desc">{{ rule.message }}</div>
+                            }
+                          </td>
+                          <td>{{ channelLabel(rule) }}</td>
+                          <td class="severity-cell">
+                            <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                          </td>
+                          <td>
                             <div class="chip-list">
-                              @for (chip of alert.chips; track chip) {
-                                <span class="chip chip-adhoc" title="Job o namespace alarmado">{{ chip }}</span>
+                              @for (api of rule.apis; track api) {
+                                <span class="chip chip-api">{{ api }}</span>
                               }
                             </div>
-                          }
-                        </td>
-                        <td>{{ alert.notification_channel || '-' }}</td>
-                        <td class="severity-cell">
-                          <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
-                        </td>
-                        <td>{{ environmentsLabel(alert.environments) }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
             </div>
           </div>
-        </div>
+        }
       }
     </section>
   </div>
