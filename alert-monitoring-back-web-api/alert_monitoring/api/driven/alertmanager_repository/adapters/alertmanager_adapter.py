@@ -22,12 +22,12 @@ class AlertManagerAdapter:
         for config in configs:
             logger.info("Recogiendo silencios activos de AlertManager %s", config.name)
             for raw in self.client.fetch_silences(config):
-                blackout = self._to_domain(raw)
+                blackout = self._to_domain(raw, source=config.name)
                 if blackout is not None and blackout.state == "active":
                     blackouts.append(blackout)
         return blackouts
 
-    def _to_domain(self, raw: dict) -> Optional[Blackout]:
+    def _to_domain(self, raw: dict, source: Optional[str] = None) -> Optional[Blackout]:
         try:
             status = raw.get("status") or {}
             matchers = [
@@ -47,6 +47,7 @@ class AlertManagerAdapter:
                 created_by=raw.get("createdBy"),
                 comment=raw.get("comment"),
                 state=str(status.get("state", "active")),
+                source=source,
             )
         except Exception as exc:
             logger.warning("Silencio AlertManager malformado, se omite: %s", exc)

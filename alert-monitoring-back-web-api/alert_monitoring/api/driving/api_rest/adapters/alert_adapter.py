@@ -119,6 +119,7 @@ def get_active_blackouts(
             ends_at=b.ends_at,
             created_by=b.created_by,
             comment=b.comment,
+            source=b.source,
         )
         for b in blackouts
     ]
