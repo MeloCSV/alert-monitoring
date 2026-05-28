@@ -362,13 +362,14 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 
-  @media (max-width: 1100px) { grid-template-columns: 1fr; }
+  @media (max-width: 1300px) { grid-template-columns: 1fr; }
 }
 
 .panel {
   border: 1px solid #e6e6e6;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: hidden; /* fallback */
+  overflow: clip;   /* clips corners visually but allows descendant scroll containers */
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -407,6 +408,7 @@
   flex: 1;
   overflow-x: auto;
   min-width: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .empty-panel {
@@ -419,7 +421,7 @@
 
 .alert-table {
   width: 100%;
-  min-width: 500px;
+  min-width: 420px;
   border-collapse: collapse;
 
   thead th {
