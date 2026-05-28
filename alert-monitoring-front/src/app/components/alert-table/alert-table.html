@@ -131,7 +131,7 @@
                         <span class="silence-until">Válido hasta <strong>{{ formatSilenceDate(silence.ends_at) }}</strong></span>
                         @if (silence.source) {
                           <span class="silence-source"
-                            [class.silence-source-openshift]="silence.source.toLowerCase().includes('openshift')"
+                            [class.silence-source-openshift]="silence.source.toLowerCase().includes('openshift') || silence.source.toLowerCase().includes('ocp')"
                             [class.silence-source-gcp]="silence.source.toLowerCase().includes('gcp')">{{ silence.source }}</span>
                         }
                       </div>
