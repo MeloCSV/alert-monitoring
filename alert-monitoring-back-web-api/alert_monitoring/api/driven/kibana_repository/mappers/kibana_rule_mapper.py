@@ -8,20 +8,32 @@ from alert_monitoring.api.driven.kibana_repository.models.kibana_config import K
 
 logger = logging.getLogger(__name__)
 
-
+# Matches: [NOT] transactionElement.serviceName : value-or-group
 _SERVICE_NAME_CLAUSE = re.compile(
     r"(?P<neg>\bNOT\s+)?transactionElement\.serviceName\s*:\s*(?P<val>\([^)]+\)|\"[^\"]+\"|[A-Za-z0-9_\-]+)",
     re.IGNORECASE,
 )
+# Matches: [NOT] api : value  (simple api field used in non-global rules)
+_API_CLAUSE = re.compile(
+    r"(?P<neg>\bNOT\s+)?(?<!\w)api\s*:\s*(?P<val>\"[^\"]+\"|[A-Za-z0-9_\-]+)",
+    re.IGNORECASE,
+)
 _QUOTED_VALUE = re.compile(r'"([A-Za-z0-9_\-]+)"')
+
+# Connectors that are purely internal logging – not user-facing channels
+_INTERNAL_CONNECTORS = {".index", ".server-log"}
+
+# Webhook body label → display channel name
+_WEBHOOK_LABEL_CHANNELS: Dict[str, str] = {
+    "msteams": "Microsoft Teams",
+    "omi": "ServiceNow",
+}
+
 _CONNECTOR_DISPLAY: Dict[str, str] = {
-    ".webhook": "Webhook",
-    ".index": "Elastic Index",
     ".teams": "Microsoft Teams",
     ".slack": "Slack",
     ".email": "Email",
     ".pagerduty": "PagerDuty",
-    ".server-log": "Server Log",
 }
 
 
@@ -41,8 +53,8 @@ class KibanaRuleMapper:
         params = raw.get("params") or {}
         tags = [str(t) for t in (raw.get("tags") or []) if t]
 
-        apis = self._extract_apis(params)
-        is_global = self._is_global(raw, tags, apis)
+        apis, disabled_apis = self._extract_apis(params)
+        is_global = self._is_global(raw, tags)
 
         raw_name = str(raw.get("name") or "")
         return KibanaRule(
@@ -54,6 +66,7 @@ class KibanaRuleMapper:
             severity=self._infer_severity(actions),
             notification_channels=self._infer_channels(actions),
             apis=apis,
+            disabled_apis=disabled_apis,
             is_global=is_global,
             last_execution_date=(raw.get("execution_status") or {}).get("last_execution_date"),
             last_execution_status=(raw.get("execution_status") or {}).get("status"),
@@ -62,31 +75,48 @@ class KibanaRuleMapper:
             message=self._extract_message(actions),
         )
 
-    def _extract_apis(self, params: dict) -> List[str]:
+    def _extract_apis(self, params: dict) -> Tuple[List[str], List[str]]:
+        """Returns (positive_apis, disabled_apis).
+
+        - positive_apis: APIs explicitly included (from 'api :' clauses or positive serviceName)
+        - disabled_apis: APIs explicitly excluded (from 'NOT transactionElement.serviceName:')
+        """
         search_config = params.get("searchConfiguration") or {}
         kql = (search_config.get("query") or {}).get("query") or ""
 
         positive: set = set()
         negated: set = set()
 
+        # Global rules use transactionElement.serviceName with NOT to exclude
         for m in _SERVICE_NAME_CLAUSE.finditer(kql):
             is_negated = bool(m.group("neg"))
             clause = m.group("val")
-
-            if clause.startswith("("):
-                values = [qm.group(1) for qm in _QUOTED_VALUE.finditer(clause)]
-            elif clause.startswith('"'):
-                values = [clause.strip('"')]
-            else:
-                values = [clause.strip()]
-
+            values = self._parse_clause_values(clause)
             for v in values:
                 if v:
                     (negated if is_negated else positive).add(v)
 
-        return [v for v in positive if v not in negated]
+        # Non-global / per-app rules use bare 'api :' field to include
+        for m in _API_CLAUSE.finditer(kql):
+            is_negated = bool(m.group("neg"))
+            clause = m.group("val")
+            values = self._parse_clause_values(clause)
+            for v in values:
+                if v:
+                    (negated if is_negated else positive).add(v)
 
-    def _is_global(self, raw: dict, tags: List[str], apis: List[str]) -> bool:
+        included = [v for v in positive if v not in negated]
+        disabled = sorted(negated)
+        return included, disabled
+
+    def _parse_clause_values(self, clause: str) -> List[str]:
+        if clause.startswith("("):
+            return [qm.group(1) for qm in _QUOTED_VALUE.finditer(clause)]
+        if clause.startswith('"'):
+            return [clause.strip('"')]
+        return [clause.strip()]
+
+    def _is_global(self, raw: dict, tags: List[str]) -> bool:
         return "global" in tags
 
     def _infer_severity(self, actions: List[dict]) -> Optional[str]:
@@ -125,8 +155,6 @@ class KibanaRuleMapper:
             params = action.get("params") or {}
             connector = action.get("connector_type_id") or ""
 
-            # .index connector: documents[0].alerts[0].annotations.message
-            # or documents[0].message (direct)
             if connector == ".index":
                 for doc in params.get("documents") or []:
                     for alert in doc.get("alerts") or []:
@@ -137,7 +165,6 @@ class KibanaRuleMapper:
                     if msg:
                         return str(msg)
 
-            # .webhook connector: body is a JSON string → [0].annotations.message
             if connector == ".webhook":
                 body = params.get("body")
                 if isinstance(body, str):
@@ -153,13 +180,53 @@ class KibanaRuleMapper:
         return None
 
     def _infer_channels(self, actions: List[dict]) -> List[str]:
+        """Map connector actions to display channel names.
+
+        - .index / .server-log  → internal, skip
+        - .teams                → Microsoft Teams
+        - .webhook              → inspect body labels for msteams/omi
+        - others                → use _CONNECTOR_DISPLAY or capitalize
+        """
         channels: List[str] = []
+
         for action in actions:
             connector = action.get("connector_type_id") or ""
-            display = _CONNECTOR_DISPLAY.get(connector, connector.lstrip(".").capitalize() if connector else None)
+
+            if connector in _INTERNAL_CONNECTORS:
+                continue
+
+            if connector == ".webhook":
+                channel = self._channel_from_webhook_body(action)
+                if channel and channel not in channels:
+                    channels.append(channel)
+                continue
+
+            display = _CONNECTOR_DISPLAY.get(connector)
+            if not display and connector:
+                display = connector.lstrip(".").capitalize()
             if display and display not in channels:
                 channels.append(display)
+
         return channels
+
+    def _channel_from_webhook_body(self, action: dict) -> Optional[str]:
+        body = (action.get("params") or {}).get("body")
+        if not isinstance(body, str):
+            return None
+        try:
+            parsed = json.loads(body)
+            labels: dict = {}
+            if isinstance(parsed, list) and parsed:
+                labels = parsed[0].get("labels") or {}
+            elif isinstance(parsed, dict):
+                labels = parsed.get("labels") or {}
+
+            for label_key, display_name in _WEBHOOK_LABEL_CHANNELS.items():
+                if str(labels.get(label_key, "")).lower() == "true":
+                    return display_name
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            pass
+        return None
 
     def _build_rule_url(self, rule_id: Optional[str], config: KibanaConfig) -> Optional[str]:
         if not rule_id:
