@@ -17,6 +17,10 @@
   padding: 28px 36px 18px;
   h1 { margin: 0; font-size: 1.85rem; font-weight: 400; color: #2b2b2b; }
   .subtitle { margin: 6px 0 0; font-size: 0.9rem; color: #6b6b6b; }
+  @media (max-width: 600px) {
+    padding: 18px 16px 12px;
+    h1 { font-size: 1.3rem; }
+  }
 }
 
 /* ---------- Severity Legend ---------- */
@@ -29,6 +33,7 @@
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
+  @media (max-width: 600px) { padding: 10px 16px; gap: 10px; }
 }
 
 .legend-title {
@@ -56,6 +61,7 @@
   background: #f3f3f3;
   border-top: 1px solid #e6e6e6;
   border-bottom: 1px solid #e6e6e6;
+  @media (max-width: 600px) { padding: 14px 16px; }
 }
 
 .filters-mandatory {
@@ -68,6 +74,7 @@
 .solution-filter {
   flex: 1 1 320px;
   max-width: 480px;
+  @media (max-width: 500px) { flex: 1 1 100%; max-width: 100%; }
 }
 
 .filter {
@@ -152,7 +159,10 @@
 
 /* ---------- Results ---------- */
 
-.results { padding: 22px 28px 28px; }
+.results {
+  padding: 22px 28px 28px;
+  @media (max-width: 600px) { padding: 14px 12px 20px; }
+}
 
 .state {
   padding: 32px 4px;
@@ -392,6 +402,7 @@
 .panel-body {
   flex: 1;
   overflow-x: auto;
+  min-width: 0;
 }
 
 .empty-panel {
@@ -404,6 +415,7 @@
 
 .alert-table {
   width: 100%;
+  min-width: 500px;
   border-collapse: collapse;
 
   thead th {
