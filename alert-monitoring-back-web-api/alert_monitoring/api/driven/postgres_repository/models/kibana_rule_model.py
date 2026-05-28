@@ -18,6 +18,7 @@ class KibanaRuleDB(SQLModel, table=True):
     severity: Optional[str] = None
     notification_channels: List[str] = Field(default=[], sa_column=Column(JSON))
     apis: List[str] = Field(default=[], sa_column=Column(JSON))
+    disabled_apis: List[str] = Field(default=[], sa_column=Column(JSON))
     is_global: bool = Field(default=False, index=True)
     last_execution_date: Optional[datetime] = None
     last_execution_status: Optional[str] = None

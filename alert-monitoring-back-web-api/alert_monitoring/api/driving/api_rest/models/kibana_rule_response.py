@@ -12,6 +12,7 @@ class KibanaRuleResponse(BaseModel):
     severity: Optional[str]
     notification_channels: List[str]
     apis: List[str]
+    disabled_apis: List[str]
     is_global: bool
     last_execution_date: Optional[str]
     last_execution_status: Optional[str]

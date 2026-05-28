@@ -11,6 +11,7 @@ class KibanaRule(BaseModel):
     severity: Optional[str] = Field(None, description="Severidad inferida de las acciones")
     notification_channels: List[str] = Field(default_factory=list, description="Canales de notificación inferidos de las acciones")
     apis: List[str] = Field(default_factory=list, description="APIs a las que aplica la regla (extraídas del KQL o termField)")
+    disabled_apis: List[str] = Field(default_factory=list, description="APIs excluidas de una regla global (NOT serviceName)")
     is_global: bool = Field(default=False, description="True si la regla no aplica a una API concreta")
     last_execution_date: Optional[str] = Field(None, description="Última fecha de ejecución reportada por Kibana")
     last_execution_status: Optional[str] = Field(None, description="Estado de la última ejecución")

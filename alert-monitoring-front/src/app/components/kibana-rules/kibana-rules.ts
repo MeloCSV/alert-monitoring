@@ -5,6 +5,8 @@ import { forkJoin } from 'rxjs';
 import { AlertService, KibanaRule } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
+type SeverityFilter = '' | 'warning' | 'principal' | 'critical';
+
 @Component({
   selector: 'app-kibana-rules',
   standalone: true,
@@ -19,6 +21,9 @@ export class KibanaRulesComponent implements OnInit {
   error = false;
 
   selectedApi = '';
+  channel = '';
+  severity: SeverityFilter = '';
+  showOptionalFilters = false;
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
@@ -42,18 +47,58 @@ export class KibanaRulesComponent implements OnInit {
   }
 
   get globalRules(): KibanaRule[] {
-    return this.rules.filter(r => r.is_global && r.enabled);
+    return this.rules.filter(r => r.is_global && r.enabled && this.passesFilters(r));
   }
 
   get apiRules(): KibanaRule[] {
     if (!this.selectedApi) return [];
     const api = this.selectedApi.toLowerCase();
-    return this.rules.filter(r => !r.is_global && r.enabled && r.apis.some(a => a.toLowerCase() === api));
+    return this.rules.filter(
+      r => !r.is_global && r.enabled &&
+        r.apis.some(a => a.toLowerCase() === api) &&
+        this.passesFilters(r)
+    );
+  }
+
+  get channelOptions(): string[] {
+    const seen = new Set<string>();
+    for (const r of this.rules) {
+      for (const ch of r.notification_channels) {
+        seen.add(ch);
+      }
+    }
+    return Array.from(seen).sort();
   }
 
   onApiChange(value: string): void {
     this.selectedApi = value;
     this.cdr.detectChanges();
+  }
+
+  toggleOptionalFilters(): void {
+    this.showOptionalFilters = !this.showOptionalFilters;
+  }
+
+  clearOptionalFilters(): void {
+    this.channel = '';
+    this.severity = '';
+  }
+
+  channelLabel(rule: KibanaRule): string {
+    return rule.notification_channels.length ? rule.notification_channels.join(', ') : '-';
+  }
+
+  isDisabledForApi(rule: KibanaRule, api: string): boolean {
+    return rule.disabled_apis.some(a => a.toLowerCase() === api.toLowerCase());
+  }
+
+  private passesFilters(rule: KibanaRule): boolean {
+    if (this.channel) {
+      const ch = this.channel.toLowerCase();
+      if (!rule.notification_channels.some(c => c.toLowerCase() === ch)) return false;
+    }
+    if (this.severity && (rule.severity || '').toLowerCase() !== this.severity) return false;
+    return true;
   }
 
   formatLastExecution(date: string | null): string {

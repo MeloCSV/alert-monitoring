@@ -53,6 +53,7 @@ export interface KibanaRule {
   severity: string | null;
   notification_channels: string[];
   apis: string[];
+  disabled_apis: string[];
   is_global: boolean;
   last_execution_date: string | null;
   last_execution_status: string | null;
