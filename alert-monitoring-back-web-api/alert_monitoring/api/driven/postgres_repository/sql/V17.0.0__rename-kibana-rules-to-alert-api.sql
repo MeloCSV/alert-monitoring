@@ -12,6 +12,7 @@ ALTER TABLE alert_api DROP COLUMN IF EXISTS kibana_url;
 ALTER TABLE alert_api DROP COLUMN IF EXISTS kibana_name;
 
 ALTER TABLE alert_api RENAME COLUMN notification_channels TO notification_channel;
+ALTER TABLE alert_api ALTER COLUMN notification_channel DROP NOT NULL;
 ALTER TABLE alert_api ALTER COLUMN notification_channel TYPE VARCHAR(100) USING (notification_channel->>0);
 
 ALTER TABLE alert_api RENAME COLUMN apis TO apis_alertadas;
