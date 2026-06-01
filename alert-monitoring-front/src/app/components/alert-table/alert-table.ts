@@ -1,7 +1,6 @@
 import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
-import { AlertService, Alert, Blackout, DefaultAlertView, KibanaRule } from '../../services/alert';
+import { AlertService, Alert, AlertApi, ApiSolutionView, Blackout, DefaultAlertView, DefaultAlertApiView, KibanaRule } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -30,9 +29,12 @@ export class AlertTableComponent implements OnInit {
   environment: EnvironmentFilter = '';
 
   // APIs state
-  rules: KibanaRule[] = [];
-  apiOptions: string[] = [];
-  selectedApi = '';
+  apiSolutionName = '';
+  private apiDefaultData: DefaultAlertApiView[] = [];
+  private apiAdhocData: AlertApi[] = [];
+  apiChannels: string[] = [];
+  apiSolutionLoading = false;
+  apiSolutionError = false;
 
   // Shared state
   loading = true;
@@ -40,6 +42,9 @@ export class AlertTableComponent implements OnInit {
   channel = '';
   severity: SeverityFilter = '';
   showOptionalFilters = false;
+
+  // Keep KibanaRule for backward compat (unused in new mode but kept to avoid import errors)
+  rules: KibanaRule[] = [];
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
@@ -65,13 +70,9 @@ export class AlertTableComponent implements OnInit {
         }
       });
     } else {
-      forkJoin({
-        rules: this.alertService.getKibanaRules(),
-        apis: this.alertService.getKibanaRuleApis(),
-      }).subscribe({
-        next: ({ rules, apis }) => {
-          this.rules = rules;
-          this.apiOptions = apis;
+      this.alertService.getCatalogApps().subscribe({
+        next: (apps) => {
+          this.solutionOptions = apps.map(a => a.name);
           this.loading = false;
           this.cdr.detectChanges();
         },
@@ -187,53 +188,68 @@ export class AlertTableComponent implements OnInit {
 
   // APIs methods
 
-  onApiChange(value: string): void {
-    this.selectedApi = value;
+  onApiSolutionChange(value: string): void {
+    this.apiSolutionName = value;
+    this.channel = '';
+    this.apiSolutionError = false;
+
+    if (!value) {
+      this.apiDefaultData = [];
+      this.apiAdhocData = [];
+      this.apiChannels = [];
+      this.apiSolutionLoading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.apiSolutionLoading = true;
     this.cdr.detectChanges();
+
+    this.alertService.getApiSolutionView(value).subscribe({
+      next: (view) => {
+        this.apiDefaultData = view.default_alerts;
+        this.apiAdhocData = view.adhoc_alerts;
+        this.apiChannels = view.channels;
+        this.apiSolutionLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.apiSolutionError = true;
+        this.apiSolutionLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  get globalRules(): KibanaRule[] {
-    return this.rules.filter(r => r.is_global && r.enabled && this.passesApiFilters(r));
+  get hasApiSolutionSelected(): boolean {
+    return !!this.apiSolutionName;
   }
 
-  get apiRules(): KibanaRule[] {
-    if (!this.selectedApi) return [];
-    const api = this.selectedApi.toLowerCase();
-    return this.rules.filter(
-      r => !r.is_global && r.enabled &&
-        r.apis.some(a => a.toLowerCase() === api) &&
-        this.passesApiFilters(r)
-    );
+  get apiDefaultAlerts(): DefaultAlertApiView[] {
+    return this.apiDefaultData.filter(d => this.passesApiDefaultFilters(d));
+  }
+
+  get apiAdhocAlerts(): AlertApi[] {
+    return this.apiAdhocData.filter(a => this.passesApiAdhocFilters(a));
+  }
+
+  private passesApiDefaultFilters(d: DefaultAlertApiView): boolean {
+    if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    if (this.severity && (d.severity || '').toLowerCase() !== this.severity) return false;
+    return true;
+  }
+
+  private passesApiAdhocFilters(a: AlertApi): boolean {
+    if (this.channel && (a.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    if (this.severity && (a.severity || '').toLowerCase() !== this.severity) return false;
+    return true;
   }
 
   get channelOptions(): string[] {
     if (this.mode === 'apis') {
-      const seen = new Set<string>();
-      for (const r of this.rules) {
-        for (const ch of r.notification_channels) {
-          seen.add(ch);
-        }
-      }
-      return Array.from(seen).sort();
+      return this.apiChannels;
     }
     return this.channels;
-  }
-
-  isDisabledForApi(rule: KibanaRule, api: string): boolean {
-    return rule.disabled_apis.some(a => a.toLowerCase() === api.toLowerCase());
-  }
-
-  channelLabel(rule: KibanaRule): string {
-    return rule.notification_channels.length ? rule.notification_channels.join(', ') : '-';
-  }
-
-  private passesApiFilters(rule: KibanaRule): boolean {
-    if (this.channel) {
-      const ch = this.channel.toLowerCase();
-      if (!rule.notification_channels.some(c => c.toLowerCase() === ch)) return false;
-    }
-    if (this.severity && (rule.severity || '').toLowerCase() !== this.severity) return false;
-    return true;
   }
 
   // Shared methods

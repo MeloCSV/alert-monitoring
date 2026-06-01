@@ -6,6 +6,7 @@ from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import SolutionView
+from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView
 
 
 class AlertServicePort(ABC):
@@ -36,4 +37,8 @@ class AlertServicePort(ABC):
 
     @abstractmethod
     def get_solution_view(self, solution: str) -> SolutionView:
+        pass
+
+    @abstractmethod
+    def get_api_solution_view(self, app: str) -> ApiSolutionView:
         pass

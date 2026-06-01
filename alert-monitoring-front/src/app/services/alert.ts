@@ -63,6 +63,36 @@ export interface KibanaRule {
   message: string | null;
 }
 
+export interface AlertApi {
+  id: number | null;
+  name: string;
+  description: string | null;
+  api: string;
+  microservice: string;
+  severity: string | null;
+  notification_channel: string | null;
+  environments: string[];
+}
+
+export interface DefaultAlertApiView {
+  raw_name: string;
+  name: string;
+  description: string | null;
+  severity: string | null;
+  notification_channel: string | null;
+  environments: string[];
+  is_disabled: boolean;
+  is_partial: boolean;
+  chips: string[];
+}
+
+export interface ApiSolutionView {
+  app: string;
+  default_alerts: DefaultAlertApiView[];
+  adhoc_alerts: AlertApi[];
+  channels: string[];
+}
+
 export interface DefaultAlertView {
   raw_name: string;
   name: string;
@@ -110,5 +140,10 @@ export class AlertService {
 
   getKibanaRules(): Observable<KibanaRule[]> {
     return this.http.get<KibanaRule[]>(this.kibanaRulesUrl);
+  }
+
+  getApiSolutionView(app: string): Observable<ApiSolutionView> {
+    const params = new HttpParams().set('app', app);
+    return this.http.get<ApiSolutionView>(`${this.apiUrl}/api-view`, { params });
   }
 }
