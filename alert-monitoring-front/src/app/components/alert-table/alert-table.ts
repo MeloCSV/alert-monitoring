@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertService, Alert, AlertApi, ApiSolutionView, Blackout, DefaultAlertView, DefaultAlertApiView, KibanaRule } from '../../services/alert';
+import { AlertService, Alert, AlertApi, ApiSolutionView, Blackout, DefaultAlertView, DefaultAlertApiView } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -45,46 +45,33 @@ export class AlertTableComponent implements OnInit {
   severity: SeverityFilter = '';
   showOptionalFilters = false;
 
-  // Keep KibanaRule for backward compat (unused in new mode but kept to avoid import errors)
-  rules: KibanaRule[] = [];
-
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
+    this.loadCatalogApps();
     if (this.mode === 'apps') {
-      this.alertService.getCatalogApps().subscribe({
-        next: (apps) => {
-          this.solutionOptions = apps.map(a => a.name);
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.error = true;
-          this.loading = false;
-          this.cdr.detectChanges();
-        }
-      });
-
       this.alertService.getBlackouts().subscribe({
         next: (blackouts) => {
           this.allBlackouts = blackouts;
           this.cdr.detectChanges();
         }
       });
-    } else {
-      this.alertService.getCatalogApps().subscribe({
-        next: (apps) => {
-          this.solutionOptions = apps.map(a => a.name);
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.error = true;
-          this.loading = false;
-          this.cdr.detectChanges();
-        }
-      });
     }
+  }
+
+  private loadCatalogApps(): void {
+    this.alertService.getCatalogApps().subscribe({
+      next: (apps) => {
+        this.solutionOptions = apps.map(a => a.name);
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.error = true;
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   // Apps methods
@@ -156,17 +143,19 @@ export class AlertTableComponent implements OnInit {
     return !!this.solutionName;
   }
 
-  private passesCommonFilters(alert: Alert): boolean {
-    if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
-    if (this.channel && (alert.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
-    if (this.severity && (alert.severity || '').toLowerCase() !== this.severity) return false;
+  private matchesChannelAndSeverity(channel: string | null, severity: string | null): boolean {
+    if (this.channel && (channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
+    if (this.severity && (severity || '').toLowerCase() !== this.severity) return false;
     return true;
   }
 
+  private passesCommonFilters(alert: Alert): boolean {
+    if (this.environment && !alert.environments.map(e => e.toLowerCase()).includes(this.environment)) return false;
+    return this.matchesChannelAndSeverity(alert.notification_channel, alert.severity);
+  }
+
   private passesDefaultFilters(d: DefaultAlertView): boolean {
-    if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
-    if (this.severity && (d.severity || '').toLowerCase() !== this.severity) return false;
-    return true;
+    return this.matchesChannelAndSeverity(d.notification_channel, d.severity);
   }
 
   toggleSilences(): void {
@@ -239,9 +228,7 @@ export class AlertTableComponent implements OnInit {
   }
 
   private passesApiDefaultFilters(d: DefaultAlertApiView): boolean {
-    if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
-    if (this.severity && (d.severity || '').toLowerCase() !== this.severity) return false;
-    return true;
+    return this.matchesChannelAndSeverity(d.notification_channel, d.severity);
   }
 
   appApisForRule(rule: AlertApi): string[] {
@@ -266,9 +253,7 @@ export class AlertTableComponent implements OnInit {
   }
 
   private passesApiAdhocFilters(a: AlertApi): boolean {
-    if (this.channel && (a.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
-    if (this.severity && (a.severity || '').toLowerCase() !== this.severity) return false;
-    return true;
+    return this.matchesChannelAndSeverity(a.notification_channel, a.severity);
   }
 
   get channelOptions(): string[] {
