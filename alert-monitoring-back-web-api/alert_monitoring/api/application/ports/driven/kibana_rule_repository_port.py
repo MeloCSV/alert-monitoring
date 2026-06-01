@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from alert_monitoring.api.domain.models.kibana_rule import KibanaRule
+from alert_monitoring.api.domain.models.kibana_rule import AlertApi
 
 
-class KibanaRuleRepositoryPort(ABC):
+class AlertApiRepositoryPort(ABC):
 
     @abstractmethod
-    def save_all(self, rules: List[KibanaRule]) -> None:
+    def save_all(self, rules: List[AlertApi]) -> None:
         ...
 
     @abstractmethod
@@ -15,7 +15,7 @@ class KibanaRuleRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    def get_all(self, api: Optional[str] = None, is_global: Optional[bool] = None) -> List[KibanaRule]:
+    def get_all(self, api: Optional[str] = None) -> List[AlertApi]:
         ...
 
     @abstractmethod

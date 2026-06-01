@@ -9,4 +9,3 @@ class AlertFilter(BaseModel):
     environments: Optional[List[Literal["dev", "itg", "pre", "pro"]]] = Field(None, description="Entornos donde aplica la alerta")
     microservice: Optional[str] = Field(None, description="Filtro por microservicio (coincidencia parcial)")
     solution: Optional[str] = Field(None, description="PI fabricado (coincidencia parcial)")
-    alert_type: Optional[Literal["Por Defecto", "Ad-hoc"]] = Field( None, description="Tipo de alerta: Por Defecto o Ad-hoc")

@@ -33,11 +33,6 @@ def _raw_rule(name: str, tags: list, kql: str = "", actions: list = None) -> dic
 
 class TestNameCleaning:
     def test_global_prefix_is_stripped_from_name(self, mapper, base_config):
-        """
-        Given a rule whose name starts with '[Global]'
-        When mapped
-        Then the name has the prefix removed
-        """
         raw = _raw_rule("[Global] Errores Totales 15% OCP", tags=["global"])
         result = mapper.to_domain([raw], base_config)[0]
         assert result.name == "Errores Totales 15% OCP"
@@ -53,66 +48,17 @@ class TestNameCleaning:
         assert result.name == "[Absence] Errores 500"
 
 
-class TestIsGlobal:
-    def test_global_tag_marks_rule_as_global(self, mapper, base_config):
-        """
-        Given a rule with tag 'global' and no APIs in KQL
-        When mapped
-        Then is_global is True
-        """
-        raw = _raw_rule("[Global] Errores Totales 15% OCP", tags=["global", "api-mngt"])
-        result = mapper.to_domain([raw], base_config)[0]
-        assert result.is_global is True
-
-    def test_global_tag_marks_rule_as_global_even_with_exclusion_list(self, mapper, base_config):
-        """
-        Given a rule with tag 'global' whose KQL uses NOT exclusions
-        When mapped
-        Then is_global is True (tag wins, exclusion list does not pollute is_global)
-        """
-        kql = (
-            'alerta500.keyword: "true" AND ('
-            'NOT transactionElement.serviceName: payroll AND '
-            'NOT transactionElement.serviceName: absence AND '
-            'NOT transactionElement.serviceName: suppliers)'
-        )
-        raw = _raw_rule("[Global] Errores 500 por API y método", tags=["api-mngt", "global"], kql=kql)
-        result = mapper.to_domain([raw], base_config)[0]
-        assert result.is_global is True
-
-    def test_rule_without_global_tag_is_not_global(self, mapper, base_config):
-        """
-        Given a rule without tag 'global'
-        When mapped
-        Then is_global is False
-        """
-        kql = 'alerta500.keyword: "true" AND transactionElement.serviceName: ("absence" OR "employee-labor-absence")'
-        raw = _raw_rule("[Absence] Errores 500", tags=["api-mngt"], kql=kql)
-        result = mapper.to_domain([raw], base_config)[0]
-        assert result.is_global is False
-
-
 class TestExtractApis:
     def test_extracts_apis_from_positive_kql(self, mapper, base_config):
-        """
-        Given a KQL with explicit positive serviceName filters
-        When mapped
-        Then apis contains only those services
-        """
         kql = (
             'alerta500.keyword: "true" AND transactionElement.serviceName: ('
             '"absence" OR "employee-labor-absence" OR "employee-labor-absence-entitlement")'
         )
         raw = _raw_rule("[Absence] Errores 500", tags=["api-mngt"], kql=kql)
         result = mapper.to_domain([raw], base_config)[0]
-        assert "absence" in result.apis
+        assert "absence" in result.apis_alertadas
 
     def test_does_not_extract_negated_apis_as_targeted_apis(self, mapper, base_config):
-        """
-        Given a KQL with only NOT exclusions (global exclusion list pattern)
-        When mapped
-        Then apis is empty because no API is positively targeted
-        """
         kql = (
             'alerta500.keyword: "true" AND ('
             'NOT transactionElement.serviceName: payroll AND '
@@ -121,14 +67,9 @@ class TestExtractApis:
         )
         raw = _raw_rule("[Global] Errores 500 por API y método", tags=["api-mngt", "global"], kql=kql)
         result = mapper.to_domain([raw], base_config)[0]
-        assert result.apis == []
+        assert result.apis_alertadas == []
 
     def test_excludes_negated_apis_from_positive_matches(self, mapper, base_config):
-        """
-        Given a KQL that positively matches a serviceName but also negates others
-        When mapped
-        Then apis only contains the positively targeted service
-        """
         kql = (
             'alerta500.keyword: "true" AND '
             'transactionElement.serviceName: my-api AND '
@@ -136,15 +77,10 @@ class TestExtractApis:
         )
         raw = _raw_rule("[Team] Errores 500 my-api", tags=["api-mngt"], kql=kql)
         result = mapper.to_domain([raw], base_config)[0]
-        assert "my-api" in result.apis
-        assert "other-api" not in result.apis
+        assert "my-api" in result.apis_alertadas
+        assert "other-api" not in result.apis_alertadas
 
     def test_esql_rule_has_empty_apis(self, mapper, base_config):
-        """
-        Given a rule using esqlQuery (no searchConfiguration)
-        When mapped
-        Then apis is empty
-        """
         raw = {
             "id": "esql-rule-1",
             "enabled": True,
@@ -159,5 +95,38 @@ class TestExtractApis:
             "execution_status": {"status": "ok", "last_execution_date": "2026-05-22T07:00:00Z"},
         }
         result = mapper.to_domain([raw], base_config)[0]
-        assert result.apis == []
-        assert result.is_global is True
+        assert result.apis_alertadas == []
+
+
+class TestNotificationChannel:
+    def test_servicenow_takes_priority_over_teams(self, mapper, base_config):
+        """ServiceNow (omi) should win over Microsoft Teams when both are present."""
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": '[{"labels": {"msteams": "true"}}]'},
+            },
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": '[{"labels": {"omi": "true"}}]'},
+            },
+        ]
+        raw = _raw_rule("Rule with both channels", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel == "ServiceNow"
+
+    def test_single_teams_channel(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": '[{"labels": {"msteams": "true"}}]'},
+            }
+        ]
+        raw = _raw_rule("Rule with Teams", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel == "Microsoft Teams"
+
+    def test_no_channel_returns_none(self, mapper, base_config):
+        raw = _raw_rule("Rule without channels", tags=["api-mngt"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel is None

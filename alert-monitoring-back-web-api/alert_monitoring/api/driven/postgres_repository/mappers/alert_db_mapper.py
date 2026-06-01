@@ -3,6 +3,7 @@ from typing import List
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.driven.postgres_repository.models.alert_model import AlertDB
 
+
 class AlertDBMapper:
 
     def to_db(self, alert: Alert) -> AlertDB:
@@ -16,9 +17,6 @@ class AlertDBMapper:
             microservice=alert.microservice,
             solution=alert.solution,
             notification_channel=alert.notification_channel,
-            alert_type=alert.alert_type,
-            cluster=alert.cluster,
-            prometheus_name=alert.prometheus_name,
         )
 
     def to_domain(self, alert_db: AlertDB) -> Alert:
@@ -32,9 +30,6 @@ class AlertDBMapper:
             microservice=alert_db.microservice,
             solution=alert_db.solution,
             notification_channel=alert_db.notification_channel,
-            alert_type=alert_db.alert_type,
-            cluster=alert_db.cluster,
-            prometheus_name=alert_db.prometheus_name,
         )
 
     def to_domain_list(self, alerts_db: List[AlertDB]) -> List[Alert]:

@@ -30,7 +30,7 @@ class RecomputeDisabledUseCase:
         # Build solution → set of microservices from Ad-hoc alerts
         solution_micros: dict[str, Set[str]] = defaultdict(set)
         for a in alerts:
-            if a.alert_type == "Ad-hoc" and a.solution and a.solution != "unknown" and a.microservice:
+            if a.solution and a.solution != "unknown" and a.microservice:
                 solution_micros[a.solution].add(a.microservice)
 
         solutions = sorted(solution_micros.keys())

@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
 
 class AlertDB(SQLModel, table=True):
-    __tablename__ = "alerts"
+    __tablename__ = "alert_app"
     __table_args__ = {"extend_existing": True}
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -16,6 +16,3 @@ class AlertDB(SQLModel, table=True):
     microservice: Optional[str] = None
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
-    alert_type: str = Field(default="Ad-hoc")
-    cluster: Optional[str] = None
-    prometheus_name: Optional[str] = None
