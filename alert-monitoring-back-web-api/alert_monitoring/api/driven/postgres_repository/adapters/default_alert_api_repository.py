@@ -8,6 +8,7 @@ from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
 from alert_monitoring.api.driven.postgres_repository.models.default_alert_api_model import DefaultAlertApiDB
 from alert_monitoring.api.driven.postgres_repository.mappers.default_alert_api_db_mapper import DefaultAlertApiDBMapper
+from alert_monitoring.api.driven.postgres_repository.sync_helpers import upsert_preserving_display
 
 
 class DefaultAlertApiRepositoryAdapter(DefaultAlertApiRepositoryPort):
@@ -24,34 +25,16 @@ class DefaultAlertApiRepositoryAdapter(DefaultAlertApiRepositoryPort):
 
     def upsert_batch(self, alerts: List[DefaultAlertApi]) -> None:
         self.logger.info(f"Upsert de {len(alerts)} alertas por defecto en default_alert_api")
-        for alert in alerts:
-            existing = (
-                self.sqlalchemy_repository.query(DefaultAlertApiDB)
-                .filter(DefaultAlertApiDB.raw_name == alert.raw_name)
-                .first()
-            )
-            if existing is None:
-                self.sqlalchemy_repository.add(DefaultAlertApiDB(
-                    raw_name=alert.raw_name,
-                    display_name=alert.display_name or alert.raw_name,
-                    raw_description=alert.raw_description,
-                    display_description=alert.display_description,
-                    severity=alert.severity,
-                    notification_channel=alert.notification_channel,
-                    excluded_apis=alert.excluded_apis,
-                ))
-            else:
-                existing.raw_description = alert.raw_description
-                existing.excluded_apis = alert.excluded_apis
-                if alert.severity:
-                    existing.severity = alert.severity
-                if alert.notification_channel:
-                    existing.notification_channel = alert.notification_channel
-                if existing.display_name is None:
-                    existing.display_name = alert.display_name or alert.raw_name
-                if existing.display_description is None and alert.display_description:
-                    existing.display_description = alert.display_description
-        self.sqlalchemy_repository.commit()
+        upsert_preserving_display(
+            self.sqlalchemy_repository,
+            DefaultAlertApiDB,
+            alerts,
+            owned_fields=lambda alert: {
+                # Campos cuya fuente de verdad es Kibana
+                "raw_description": alert.raw_description,
+                "excluded_apis": alert.excluded_apis,
+            },
+        )
 
     def delete_where_not_in(self, raw_names: List[str]) -> None:
         self.logger.info(f"Eliminando reglas globales obsoletas (fuera de {len(raw_names)} activas)")

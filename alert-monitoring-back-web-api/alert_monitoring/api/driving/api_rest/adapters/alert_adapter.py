@@ -2,12 +2,12 @@ from typing import List, Optional
 from logging import Logger
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
+from alert_monitoring.api.driving.api_rest.responses import ok_json, ok_list
 from alert_monitoring.api.driving.api_rest.models.alert_response import AlertResponse
 from alert_monitoring.api.driving.api_rest.models.alert_disabled_response import AlertDisabledResponse
 from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse, BlackoutMatcherResponse
@@ -73,10 +73,7 @@ def get_all_alerts(
         solution=solution,
     )
     alerts = alert_service.get_all_alerts(filters)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content=jsonable_encoder(api_rest_mapper.to_models_decorator(alerts)),
-    )
+    return ok_json(api_rest_mapper.to_models_decorator(alerts))
 
 
 @router.get('/alerts/disabled', tags=['alerts'], response_model=List[AlertDisabledResponse], responses=_ERROR_500)
@@ -87,8 +84,7 @@ def get_alert_disabled(
 ) -> JSONResponse:
     logger.info('get_alert_disabled')
     disabled = alert_service.get_alert_disabled(solution)
-    payload = [AlertDisabledResponse(**o.model_dump()) for o in disabled]
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_list(AlertDisabledResponse, disabled)
 
 
 @router.get('/alerts/defaults', tags=['alerts'], response_model=List[DefaultAlertResponse], responses=_ERROR_500)
@@ -98,8 +94,7 @@ def get_default_alerts(
 ) -> JSONResponse:
     logger.info('get_default_alerts')
     defaults = alert_service.get_default_alerts()
-    payload = [DefaultAlertResponse(**d.model_dump()) for d in defaults]
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_list(DefaultAlertResponse, defaults)
 
 
 @router.get('/alerts/blackouts', tags=['alerts'], response_model=List[BlackoutResponse], responses=_ERROR_500)
@@ -122,7 +117,7 @@ def get_active_blackouts(
         )
         for b in blackouts
     ]
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_json(payload)
 
 
 @router.get('/alerts/view', tags=['alerts'], response_model=SolutionViewResponse, responses=_ERROR_500)
@@ -139,7 +134,7 @@ def get_solution_view(
         adhoc_alerts=[AlertResponse(**a.model_dump()) for a in view.adhoc_alerts],
         channels=view.channels,
     )
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_json(payload)
 
 
 @router.get('/alerts/api-view', tags=['alerts'], response_model=ApiSolutionViewResponse, responses=_ERROR_500)
@@ -157,4 +152,4 @@ def get_api_solution_view(
         api_microservice_map=view.api_microservice_map,
         channels=view.channels,
     )
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_json(payload)

@@ -2,7 +2,6 @@ from logging import Logger
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
@@ -10,6 +9,7 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
 from alert_monitoring.api.application.ports.driving.kibana_rule_service_port import AlertApiServicePort
 from alert_monitoring.api.driving.api_rest.models.kibana_rule_response import AlertApiResponse
+from alert_monitoring.api.driving.api_rest.responses import ok_json, ok_list
 
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def get_alert_api_apis(
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
     logger.info('get_alert_api_apis')
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(service.get_apis()))
+    return ok_json(service.get_apis())
 
 
 @router.get('/alert-api', tags=['alert-api'], response_model=List[AlertApiResponse], responses=_ERROR_500)
@@ -47,5 +47,4 @@ def get_alert_api_rules(
 ) -> JSONResponse:
     logger.info(f'get_alert_api_rules api={api}')
     rules = service.get_rules(api=api)
-    payload = [AlertApiResponse(**r.model_dump()) for r in rules]
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
+    return ok_list(AlertApiResponse, rules)

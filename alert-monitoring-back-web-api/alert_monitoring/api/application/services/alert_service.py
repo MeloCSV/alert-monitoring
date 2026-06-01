@@ -17,6 +17,7 @@ from alert_monitoring.api.application.use_cases.get_api_solution_view_use_case i
 from alert_monitoring.api.application.use_cases.get_solution_view_use_case import GetSolutionViewUseCase
 from alert_monitoring.api.application.use_cases.recompute_disabled_use_case import RecomputeDisabledUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
+from alert_monitoring.api.application.services.catalog_lookup import build_catalog_lookup
 from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY
 from alert_monitoring.api.driven.alertmanager_repository.adapters.alertmanager_adapter import AlertManagerAdapter
 from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter import ElasticAdapter
@@ -74,7 +75,7 @@ class AlertService(AlertServicePort):
         self.logger = logger
 
     def _build_catalog_lookup(self) -> Dict[str, str]:
-        return {app.name.lower(): app.name for app in self.catalog_app_repository.get_all()}
+        return build_catalog_lookup(self.catalog_app_repository)
 
     def _normalize_solutions(self, alerts: List[Alert], catalog_lookup: Dict[str, str]) -> List[Alert]:
         for alert in alerts:

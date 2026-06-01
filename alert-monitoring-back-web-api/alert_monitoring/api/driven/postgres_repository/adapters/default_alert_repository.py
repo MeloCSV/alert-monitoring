@@ -8,6 +8,7 @@ from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.driven.postgres_repository.models.default_alert_model import DefaultAlertDB
 from alert_monitoring.api.driven.postgres_repository.mappers.default_alert_db_mapper import DefaultAlertDBMapper
+from alert_monitoring.api.driven.postgres_repository.sync_helpers import upsert_preserving_display
 
 
 class DefaultAlertRepositoryAdapter(DefaultAlertRepositoryPort):
@@ -24,37 +25,15 @@ class DefaultAlertRepositoryAdapter(DefaultAlertRepositoryPort):
 
     def upsert_batch(self, alerts: List[DefaultAlert]) -> None:
         self.logger.info(f"Upsert de {len(alerts)} alertas por defecto en default_alerts")
-        for alert in alerts:
-            existing = (
-                self.sqlalchemy_repository.query(DefaultAlertDB)
-                .filter(DefaultAlertDB.raw_name == alert.raw_name)
-                .first()
-            )
-            if existing is None:
-                self.sqlalchemy_repository.add(DefaultAlertDB(
-                    raw_name=alert.raw_name,
-                    display_name=alert.display_name or alert.raw_name,
-                    raw_description=alert.raw_description,
-                    display_description=alert.display_description,
-                    severity=alert.severity,
-                    notification_channel=alert.notification_channel,
-                    excluded_namespaces=alert.excluded_namespaces,
-                    included_namespaces=alert.included_namespaces,
-                    excluded_jobs=alert.excluded_jobs,
-                ))
-            else:
-                # Always update what Prometheus owns
-                existing.raw_description = alert.raw_description
-                existing.excluded_namespaces = alert.excluded_namespaces
-                existing.included_namespaces = alert.included_namespaces
-                existing.excluded_jobs = alert.excluded_jobs
-                if alert.severity:
-                    existing.severity = alert.severity
-                if alert.notification_channel:
-                    existing.notification_channel = alert.notification_channel
-                # Only fill display fields if not already set (preserve manual edits)
-                if existing.display_name is None:
-                    existing.display_name = alert.display_name or alert.raw_name
-                if existing.display_description is None and alert.display_description:
-                    existing.display_description = alert.display_description
-        self.sqlalchemy_repository.commit()
+        upsert_preserving_display(
+            self.sqlalchemy_repository,
+            DefaultAlertDB,
+            alerts,
+            owned_fields=lambda alert: {
+                # Campos cuya fuente de verdad es Prometheus
+                "raw_description": alert.raw_description,
+                "excluded_namespaces": alert.excluded_namespaces,
+                "included_namespaces": alert.included_namespaces,
+                "excluded_jobs": alert.excluded_jobs,
+            },
+        )
