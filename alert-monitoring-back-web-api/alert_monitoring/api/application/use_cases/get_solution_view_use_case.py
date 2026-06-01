@@ -28,8 +28,7 @@ class GetSolutionViewUseCase:
         ]
         channels = sorted({a.notification_channel for a in alerts if a.notification_channel})
 
-        adhoc_alerts = [a for a in alerts if a.alert_type == "Ad-hoc"]
-        for alert in adhoc_alerts:
+        for alert in alerts:
             alert.chips = extract_adhoc_chips(alert.condition)
 
         disabled_map = {o.alert_name: o for o in self.disabled_repository.get_all(solution)}
@@ -41,7 +40,7 @@ class GetSolutionViewUseCase:
         return SolutionView(
             solution=solution,
             default_alerts=default_alerts,
-            adhoc_alerts=adhoc_alerts,
+            adhoc_alerts=alerts,
             channels=channels,
         )
 

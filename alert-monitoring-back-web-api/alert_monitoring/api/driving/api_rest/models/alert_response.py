@@ -1,6 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel
 
+
 class AlertResponse(BaseModel):
     name: str
     description: str
@@ -11,7 +12,4 @@ class AlertResponse(BaseModel):
     microservice: Optional[str] = None
     solution: Optional[str] = None
     notification_channel: Optional[str] = None
-    alert_type: str = "Ad-hoc"
-    cluster: Optional[str] = None
-    prometheus_name: Optional[str] = None
     chips: List[str] = []
