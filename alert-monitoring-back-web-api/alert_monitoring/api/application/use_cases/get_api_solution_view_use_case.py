@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List, Set
 
 from alert_monitoring.api.application.ports.driven.catalog_app_api_repository_port import CatalogAppApiRepositoryPort
@@ -5,6 +6,12 @@ from alert_monitoring.api.application.ports.driven.default_alert_api_repository_
 from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView, DefaultAlertApiView
+
+_VERSION_SUFFIX = re.compile(r'\s+v\d+$')
+
+
+def _strip_version(api: str) -> str:
+    return _VERSION_SUFFIX.sub('', api)
 
 
 class GetApiSolutionViewUseCase:
@@ -20,9 +27,9 @@ class GetApiSolutionViewUseCase:
 
     def execute(self, app: str) -> ApiSolutionView:
         catalog_entries = self.catalog_app_api_repository.get_all(app=app)
-        app_apis: Set[str] = {api for entry in catalog_entries for api in entry.apis}
+        app_apis: Set[str] = {_strip_version(api) for entry in catalog_entries for api in entry.apis}
         api_microservice_map: Dict[str, str] = {
-            api: entry.microservice
+            _strip_version(api): entry.microservice
             for entry in catalog_entries
             for api in entry.apis
         }
