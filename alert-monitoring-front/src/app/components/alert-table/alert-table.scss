@@ -539,12 +539,34 @@ tr.partial {
   display: inline-block;
 }
 
-.api-entry {
+.api-cell-collapsed,
+.api-cell-expanded {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  & + .api-entry { margin-top: 8px; }
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.api-empty {
+  color: #98a2b3;
+}
+
+.api-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #e8edf8;
+  color: #1a3a7c;
+  border: 1px solid #b0c0e8;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.6;
+  flex-shrink: 0;
+
+  &:hover { background: #d0daf2; }
 }
 
 .api-path {

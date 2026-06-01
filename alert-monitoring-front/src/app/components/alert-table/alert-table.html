@@ -365,12 +365,19 @@
                             <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           </td>
                           <td>
-                            @for (api of appApisForRule(alert); track api) {
-                              <div class="api-entry">
-                                <span class="api-path">{{ api }}</span>
-                                @if (microserviceForApi(api)) {
-                                  <span class="chip chip-micro" title="Microservicio que expone esta API">{{ microserviceForApi(api) }}</span>
-                                }
+                            @if (appApisForRule(alert).length === 0) {
+                              <span class="api-empty">-</span>
+                            } @else if (appApisForRule(alert).length === 1) {
+                              <span class="api-path">{{ appApisForRule(alert)[0] }}</span>
+                            } @else if (isApiExpanded(alert.rule_id)) {
+                              <div class="api-cell-expanded">
+                                <span class="api-path">{{ appApisForRule(alert).join(', ') }}</span>
+                                <button class="api-toggle-btn" (click)="toggleApiExpansion(alert.rule_id)">−</button>
+                              </div>
+                            } @else {
+                              <div class="api-cell-collapsed">
+                                <span class="api-path">{{ appApisForRule(alert)[0] }}</span>
+                                <button class="api-toggle-btn" (click)="toggleApiExpansion(alert.rule_id)">+{{ appApisForRule(alert).length - 1 }}</button>
                               </div>
                             }
                           </td>
