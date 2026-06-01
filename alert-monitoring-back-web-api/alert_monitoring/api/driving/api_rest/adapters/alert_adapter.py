@@ -154,6 +154,7 @@ def get_api_solution_view(
         app=view.app,
         default_alerts=[DefaultAlertApiViewResponse(**d.model_dump()) for d in view.default_alerts],
         adhoc_alerts=[AlertApiResponse(**a.model_dump()) for a in view.adhoc_alerts],
+        api_microservice_map=view.api_microservice_map,
         channels=view.channels,
     )
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(payload))
