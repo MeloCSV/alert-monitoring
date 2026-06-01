@@ -13,3 +13,7 @@ class DefaultAlertApiRepositoryPort(ABC):
     @abstractmethod
     def upsert_batch(self, alerts: List[DefaultAlertApi]) -> None:
         ...
+
+    @abstractmethod
+    def delete_where_not_in(self, raw_names: List[str]) -> None:
+        ...

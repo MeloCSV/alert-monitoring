@@ -52,3 +52,11 @@ class DefaultAlertApiRepositoryAdapter(DefaultAlertApiRepositoryPort):
                 if existing.display_description is None and alert.display_description:
                     existing.display_description = alert.display_description
         self.sqlalchemy_repository.commit()
+
+    def delete_where_not_in(self, raw_names: List[str]) -> None:
+        self.logger.info(f"Eliminando reglas globales obsoletas (fuera de {len(raw_names)} activas)")
+        query = self.sqlalchemy_repository.query(DefaultAlertApiDB)
+        if raw_names:
+            query = query.filter(DefaultAlertApiDB.raw_name.notin_(raw_names))
+        query.delete(synchronize_session=False)
+        self.sqlalchemy_repository.commit()
