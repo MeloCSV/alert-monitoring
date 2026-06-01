@@ -36,6 +36,7 @@ export class AlertTableComponent implements OnInit {
   apiMicroserviceMap: Record<string, string> = {};
   apiSolutionLoading = false;
   apiSolutionError = false;
+  expandedApiRules = new Set<string>();
 
   // Shared state
   loading = true;
@@ -204,6 +205,7 @@ export class AlertTableComponent implements OnInit {
       return;
     }
 
+    this.expandedApiRules.clear();
     this.apiSolutionLoading = true;
     this.cdr.detectChanges();
 
@@ -249,6 +251,18 @@ export class AlertTableComponent implements OnInit {
 
   microserviceForApi(api: string): string {
     return this.apiMicroserviceMap[api] || '';
+  }
+
+  toggleApiExpansion(ruleId: string): void {
+    if (this.expandedApiRules.has(ruleId)) {
+      this.expandedApiRules.delete(ruleId);
+    } else {
+      this.expandedApiRules.add(ruleId);
+    }
+  }
+
+  isApiExpanded(ruleId: string): boolean {
+    return this.expandedApiRules.has(ruleId);
   }
 
   private passesApiAdhocFilters(a: AlertApi): boolean {
