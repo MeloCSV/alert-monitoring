@@ -4,6 +4,7 @@ from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
 from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
+from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
 from alert_monitoring.api.application.ports.driving.kibana_rule_service_port import AlertApiServicePort
 from alert_monitoring.api.domain.models.kibana_rule import AlertApi
 from alert_monitoring.api.driven.kibana_repository.adapters.kibana_adapter import KibanaAdapter
@@ -16,22 +17,34 @@ class AlertApiService(AlertApiServicePort):
     def __init__(
         self,
         alert_api_repository: AlertApiRepositoryPort,
+        default_alert_api_repository: DefaultAlertApiRepositoryPort,
         logger: LoggerSetup,
     ):
         self.alert_api_repository = alert_api_repository
+        self.default_alert_api_repository = default_alert_api_repository
         self.kibana_adapter = KibanaAdapter()
         self.kibana_rule_mapper = KibanaRuleMapper()
         self.logger = logger
 
     def sync_kibana_rules(self) -> int:
         self.logger.info("sync_kibana_rules")
-        rules: List[AlertApi] = []
-        for config, raw_rules in self.kibana_adapter.fetch_rules_by_config():
-            rules.extend(self.kibana_rule_mapper.to_domain(raw_rules, config))
+        default_alerts = []
+        adhoc_rules = []
 
+        for config, raw_rules in self.kibana_adapter.fetch_rules_by_config():
+            defaults, adhoc = self.kibana_rule_mapper.to_domain_split(raw_rules, config)
+            default_alerts.extend(defaults)
+            adhoc_rules.extend(adhoc)
+
+        self.default_alert_api_repository.upsert_batch(default_alerts)
         self.alert_api_repository.delete_all()
-        self.alert_api_repository.save_all(rules)
-        return len(rules)
+        self.alert_api_repository.save_all(adhoc_rules)
+
+        self.logger.info(
+            f"sync_kibana_rules: {len(default_alerts)} reglas globales en default_alert_api, "
+            f"{len(adhoc_rules)} reglas ad-hoc en alert_api"
+        )
+        return len(default_alerts) + len(adhoc_rules)
 
     def get_rules(self, api: Optional[str] = None) -> List[AlertApi]:
         self.logger.info(f"get_rules api={api}")

@@ -40,12 +40,12 @@
           </div>
         } @else {
           <div class="filter solution-filter">
-            <label>API</label>
+            <label>Aplicación <span class="required">*</span></label>
             <app-searchable-select
-              [options]="apiOptions"
-              placeholder="Selecciona una API"
-              [value]="selectedApi"
-              (valueChange)="onApiChange($event)"
+              [options]="solutionOptions"
+              placeholder="Selecciona una aplicación"
+              [value]="apiSolutionName"
+              (valueChange)="onApiSolutionChange($event)"
             ></app-searchable-select>
           </div>
         }
@@ -55,14 +55,14 @@
           class="optional-toggle"
           (click)="toggleOptionalFilters()"
           [class.open]="showOptionalFilters"
-          [disabled]="mode === 'apps' && !hasSolutionSelected"
+          [disabled]="(mode === 'apps' && !hasSolutionSelected) || (mode === 'apis' && !hasApiSolutionSelected)"
         >
           <span class="chevron" aria-hidden="true">▾</span>
           Filtros
         </button>
       </div>
 
-      @if (showOptionalFilters && (mode === 'apis' || hasSolutionSelected)) {
+      @if (showOptionalFilters && ((mode === 'apps' && hasSolutionSelected) || (mode === 'apis' && hasApiSolutionSelected))) {
         <div class="filters-optional" [class.has-env]="mode === 'apps'">
           @if (mode === 'apps') {
             <div class="filter">
@@ -268,16 +268,27 @@
 
       } @else {
 
-        @if (!loading && !error) {
+        @if (!loading && !error && !hasApiSolutionSelected) {
+          <div class="state empty-select">
+            Selecciona una aplicación para visualizar el alarmado de sus APIs.
+          </div>
+        }
+        @if (!loading && !error && hasApiSolutionSelected && apiSolutionLoading) {
+          <div class="state loading">Cargando alertas...</div>
+        }
+        @if (!loading && !error && hasApiSolutionSelected && !apiSolutionLoading && apiSolutionError) {
+          <div class="state error">Error al cargar las alertas de APIs.</div>
+        }
+        @if (!loading && !error && hasApiSolutionSelected && !apiSolutionLoading && !apiSolutionError) {
           <div class="panels">
             <div class="panel">
               <div class="panel-header default-header">
                 <h2>Alarmas por defecto</h2>
-                <span class="count">{{ globalRules.length }}</span>
+                <span class="count">{{ apiDefaultAlerts.length }}</span>
               </div>
               <div class="panel-body">
-                @if (globalRules.length === 0) {
-                  <div class="empty-panel">No hay alarmas globales.</div>
+                @if (apiDefaultAlerts.length === 0) {
+                  <div class="empty-panel">No hay alarmas por defecto.</div>
                 } @else {
                   <table class="alert-table">
                     <thead>
@@ -285,42 +296,35 @@
                         <th>Alarma</th>
                         <th>Canal de salida</th>
                         <th>Severidad</th>
-                        <th>Nombre de API</th>
+                        <th>Entorno</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (rule of globalRules; track rule.rule_id) {
-                        @let disabled = selectedApi && isDisabledForApi(rule, selectedApi);
-                        <tr [class.disabled]="disabled">
+                      @for (alert of apiDefaultAlerts; track alert.raw_name) {
+                        <tr [class.disabled]="alert.is_disabled" [class.partial]="alert.is_partial">
                           <td>
-                            <div class="alert-name">{{ rule.name }}</div>
-                            @if (rule.message) {
-                              <div class="alert-desc">{{ rule.message }}</div>
+                            <div class="alert-name">{{ alert.name }}</div>
+                            @if (alert.description) {
+                              <div class="alert-desc">{{ alert.description }}</div>
                             }
-                            @if (disabled) {
+                            @if (alert.is_disabled) {
                               <span class="disabled-tag">Deshabilitada</span>
+                            } @else if (alert.is_partial) {
+                              <span class="partial-tag">Alarmado parcialmente</span>
                             }
-                            @if (!disabled && selectedApi && rule.disabled_apis.length) {
+                            @if (!alert.is_disabled && alert.chips && alert.chips.length) {
                               <div class="chip-list">
-                                @for (api of rule.disabled_apis; track api) {
-                                  <span class="chip chip-excluded" title="API excluida de esta alarma global">{{ api }}</span>
+                                @for (chip of alert.chips; track chip) {
+                                  <span class="chip chip-excluded" title="API excluida del alarmado por defecto">{{ chip }}</span>
                                 }
                               </div>
                             }
                           </td>
-                          <td>{{ channelLabel(rule) }}</td>
+                          <td>{{ alert.notification_channel || '-' }}</td>
                           <td class="severity-cell">
-                            <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                            <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           </td>
-                          <td>
-                            @if (disabled) {
-                              <span class="api-name disabled-api">{{ selectedApi }}</span>
-                            } @else if (selectedApi) {
-                              <span class="api-name">{{ selectedApi }}</span>
-                            } @else {
-                              <span class="api-name muted">Global</span>
-                            }
-                          </td>
+                          <td>{{ environmentsLabel(alert.environments) }}</td>
                         </tr>
                       }
                     </tbody>
@@ -331,14 +335,12 @@
 
             <div class="panel">
               <div class="panel-header adhoc-header">
-                <h2>Alarmas ad-hoc</h2>
-                <span class="count">{{ apiRules.length }}</span>
+                <h2>Alarmas ad hoc</h2>
+                <span class="count">{{ apiAdhocAlerts.length }}</span>
               </div>
               <div class="panel-body">
-                @if (!selectedApi) {
-                  <div class="empty-panel">Selecciona una API para ver sus reglas.</div>
-                } @else if (apiRules.length === 0) {
-                  <div class="empty-panel">No hay reglas ad-hoc para esta API.</div>
+                @if (apiAdhocAlerts.length === 0) {
+                  <div class="empty-panel">No hay alarmas ad hoc para las APIs de esta aplicación.</div>
                 } @else {
                   <table class="alert-table">
                     <thead>
@@ -346,28 +348,31 @@
                         <th>Alarma</th>
                         <th>Canal de salida</th>
                         <th>Severidad</th>
-                        <th>Nombre de API</th>
+                        <th>API</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (rule of apiRules; track rule.rule_id) {
+                      @for (alert of apiAdhocAlerts; track alert.rule_id) {
                         <tr>
                           <td>
-                            <div class="alert-name">{{ rule.name }}</div>
-                            @if (rule.message) {
-                              <div class="alert-desc">{{ rule.message }}</div>
+                            <div class="alert-name">{{ alert.name }}</div>
+                            @if (alert.message) {
+                              <div class="alert-desc">{{ alert.message }}</div>
                             }
                           </td>
-                          <td>{{ channelLabel(rule) }}</td>
+                          <td>{{ alert.notification_channel || '-' }}</td>
                           <td class="severity-cell">
-                            <span class="severity-tag severity-{{ (rule.severity || 'unknown').toLowerCase() }}">{{ rule.severity || 'unknown' }}</span>
+                            <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           </td>
                           <td>
-                            <div class="chip-list">
-                              @for (api of rule.apis; track api) {
-                                <span class="chip chip-api">{{ api }}</span>
-                              }
-                            </div>
+                            @for (api of appApisForRule(alert); track api) {
+                              <div class="api-entry">
+                                <span class="api-path">{{ api }}</span>
+                                @if (microserviceForApi(api)) {
+                                  <span class="chip chip-micro" title="Microservicio que expone esta API">{{ microserviceForApi(api) }}</span>
+                                }
+                              </div>
+                            }
                           </td>
                         </tr>
                       }

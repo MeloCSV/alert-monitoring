@@ -4,6 +4,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from alert_monitoring.api.domain.models.kibana_rule import AlertApi
+from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.driven.kibana_repository.models.kibana_config import KibanaConfig
 
 logger = logging.getLogger(__name__)
@@ -47,34 +48,59 @@ _CHANNEL_PRIORITY: Dict[str, int] = {
 class KibanaRuleMapper:
 
     def to_domain(self, rules: List[dict], config: KibanaConfig) -> List[AlertApi]:
-        mapped: List[AlertApi] = []
+        _, adhoc = self.to_domain_split(rules, config)
+        return adhoc
+
+    def to_domain_split(
+        self, rules: List[dict], config: KibanaConfig
+    ) -> Tuple[List[DefaultAlertApi], List[AlertApi]]:
+        defaults: List[DefaultAlertApi] = []
+        adhoc: List[AlertApi] = []
         for raw in rules:
             try:
-                mapped.append(self._map_rule(raw, config))
+                raw_name = str(raw.get("name") or "")
+                if re.match(r"^\[global\]", raw_name, re.IGNORECASE):
+                    defaults.append(self._map_global_rule(raw, config))
+                else:
+                    adhoc.append(self._map_adhoc_rule(raw, config))
             except Exception as exc:
                 logger.warning("Error mapeando regla Kibana '%s': %s", raw.get("name", "?"), exc)
-        return mapped
+        return defaults, adhoc
 
-    def _map_rule(self, raw: dict, config: KibanaConfig) -> AlertApi:
+    def _map_global_rule(self, raw: dict, config: KibanaConfig) -> DefaultAlertApi:
+        actions = raw.get("actions") or []
+        params = raw.get("params") or {}
+        raw_name = str(raw.get("name") or "")
+        stripped_name = re.sub(r"^\[global\]\s*", "", raw_name, flags=re.IGNORECASE)
+        _, excluded_apis = self._extract_apis_split(params)
+        return DefaultAlertApi(
+            raw_name=stripped_name,
+            display_name=stripped_name,
+            raw_description=self._extract_message(actions),
+            display_description=None,
+            severity=self._infer_severity(actions),
+            notification_channel=self._infer_channel(actions),
+            excluded_apis=excluded_apis,
+        )
+
+    def _map_adhoc_rule(self, raw: dict, config: KibanaConfig) -> AlertApi:
         actions = raw.get("actions") or []
         params = raw.get("params") or {}
         tags = [str(t) for t in (raw.get("tags") or []) if t]
-
-        apis_alertadas = self._extract_apis(params)
-
-        raw_name = str(raw.get("name") or "")
+        positive_apis, _ = self._extract_apis_split(params)
         return AlertApi(
             rule_id=str(raw.get("id") or ""),
-            name=re.sub(r"^\[global\]\s*", "", raw_name, flags=re.IGNORECASE),
+            name=str(raw.get("name") or ""),
             enabled=bool(raw.get("enabled", False)),
             tags=tags,
             severity=self._infer_severity(actions),
             notification_channel=self._infer_channel(actions),
-            apis_alertadas=apis_alertadas,
+            apis_alertadas=positive_apis,
             message=self._extract_message(actions),
         )
 
-    def _extract_apis(self, params: dict) -> List[str]:
+    def _extract_apis_split(self, params: dict) -> Tuple[List[str], List[str]]:
+        """Returns (positive_apis, negated_apis) parsed from the KQL."""
         search_config = params.get("searchConfiguration") or {}
         kql = (search_config.get("query") or {}).get("query") or ""
 
@@ -97,7 +123,11 @@ class KibanaRuleMapper:
                 if v:
                     (negated if is_negated else positive).add(v)
 
-        return [v for v in positive if v not in negated]
+        return sorted(positive - negated), sorted(negated)
+
+    def _extract_apis(self, params: dict) -> List[str]:
+        positive, _ = self._extract_apis_split(params)
+        return positive
 
     def _parse_clause_values(self, clause: str) -> List[str]:
         if clause.startswith("("):

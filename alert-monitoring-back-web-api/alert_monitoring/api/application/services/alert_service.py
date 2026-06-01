@@ -7,9 +7,13 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_disabled_repository_port import AlertDisabledRepositoryPort
+from alert_monitoring.api.application.ports.driven.catalog_app_api_repository_port import CatalogAppApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
+from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
+from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.application.use_cases.get_all_alerts_use_case import GetAllAlertsUseCase
+from alert_monitoring.api.application.use_cases.get_api_solution_view_use_case import GetApiSolutionViewUseCase
 from alert_monitoring.api.application.use_cases.get_solution_view_use_case import GetSolutionViewUseCase
 from alert_monitoring.api.application.use_cases.recompute_disabled_use_case import RecomputeDisabledUseCase, build_exclusion_updates
 from alert_monitoring.api.application.use_cases.save_alerts_use_case import SaveAlertsUseCase
@@ -26,6 +30,7 @@ from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import SolutionView
+from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView
 
 
 class AlertService(AlertServicePort):
@@ -34,15 +39,21 @@ class AlertService(AlertServicePort):
     def __init__(
         self,
         alert_repository: AlertRepositoryPort,
+        alert_api_repository: AlertApiRepositoryPort,
         alert_disabled_repository: AlertDisabledRepositoryPort,
         catalog_app_repository: CatalogAppRepositoryPort,
+        catalog_app_api_repository: CatalogAppApiRepositoryPort,
         default_alert_repository: DefaultAlertRepositoryPort,
+        default_alert_api_repository: DefaultAlertApiRepositoryPort,
         logger: LoggerSetup,
     ):
         self.alert_repository = alert_repository
+        self.alert_api_repository = alert_api_repository
         self.disabled_repository = alert_disabled_repository
         self.catalog_app_repository = catalog_app_repository
+        self.catalog_app_api_repository = catalog_app_api_repository
         self.default_alert_repository = default_alert_repository
+        self.default_alert_api_repository = default_alert_api_repository
         self.save_use_case = SaveAlertsUseCase(alert_repository)
         self.get_all_use_case = GetAllAlertsUseCase(alert_repository)
         self.recompute_disabled_use_case = RecomputeDisabledUseCase(
@@ -50,6 +61,9 @@ class AlertService(AlertServicePort):
         )
         self.get_solution_view_use_case = GetSolutionViewUseCase(
             alert_repository, alert_disabled_repository, default_alert_repository
+        )
+        self.get_api_solution_view_use_case = GetApiSolutionViewUseCase(
+            catalog_app_api_repository, default_alert_api_repository, alert_api_repository
         )
         self.prometheus_adapter = PrometheusAdapter()
         self.prometheus_mapper = PrometheusMapper()
@@ -185,3 +199,7 @@ class AlertService(AlertServicePort):
     def get_solution_view(self, solution: str) -> SolutionView:
         self.logger.info(f'get_solution_view solution={solution}')
         return self.get_solution_view_use_case.execute(solution)
+
+    def get_api_solution_view(self, app: str) -> ApiSolutionView:
+        self.logger.info(f'get_api_solution_view app={app}')
+        return self.get_api_solution_view_use_case.execute(app)
