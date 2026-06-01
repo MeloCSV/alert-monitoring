@@ -61,7 +61,8 @@ class KibanaRuleMapper:
             try:
                 raw_name = str(raw.get("name") or "")
                 if re.match(r"^\[global\]", raw_name, re.IGNORECASE):
-                    defaults.append(self._map_global_rule(raw, config))
+                    if bool(raw.get("enabled", True)):
+                        defaults.append(self._map_global_rule(raw, config))
                 else:
                     adhoc.append(self._map_adhoc_rule(raw, config))
             except Exception as exc:
