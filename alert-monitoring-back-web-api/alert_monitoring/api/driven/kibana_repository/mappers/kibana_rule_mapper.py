@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 from alert_monitoring.api.domain.models.kibana_rule import AlertApi
 from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.driven.kibana_repository.models.kibana_config import KibanaConfig
+from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY
 
 logger = logging.getLogger(__name__)
 
@@ -73,11 +74,12 @@ class KibanaRuleMapper:
         raw_name = str(raw.get("name") or "")
         stripped_name = re.sub(r"^\[global\]\s*", "", raw_name, flags=re.IGNORECASE)
         _, excluded_apis = self._extract_apis_split(params)
+        display = DEFAULT_ALERT_DISPLAY.get(stripped_name)
         return DefaultAlertApi(
             raw_name=stripped_name,
-            display_name=stripped_name,
+            display_name=display[0] if display else stripped_name,
             raw_description=self._extract_message(actions),
-            display_description=None,
+            display_description=display[1] if display else None,
             severity=self._infer_severity(actions),
             notification_channel=self._infer_channel(actions),
             excluded_apis=excluded_apis,
