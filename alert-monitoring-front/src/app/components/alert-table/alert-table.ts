@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertService, Alert, AlertApi, ApiSolutionView, Blackout, DefaultAlertView, DefaultAlertApiView, KibanaRule } from '../../services/alert';
+import { AlertService, Alert, AlertApi, ApiSolutionView, Blackout, DefaultAlertView, DefaultAlertApiView } from '../../services/alert';
 import { SearchableSelectComponent } from '../searchable-select/searchable-select';
 
 type EnvironmentFilter = '' | 'dev' | 'itg' | 'pre' | 'pro';
@@ -44,8 +44,6 @@ export class AlertTableComponent implements OnInit {
   severity: SeverityFilter = '';
   showOptionalFilters = false;
 
-  // Keep KibanaRule for backward compat (unused in new mode but kept to avoid import errors)
-  rules: KibanaRule[] = [];
 
   constructor(private alertService: AlertService, private cdr: ChangeDetectorRef) {}
 
