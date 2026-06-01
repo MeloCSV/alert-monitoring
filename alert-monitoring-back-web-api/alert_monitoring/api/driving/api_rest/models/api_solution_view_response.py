@@ -1,17 +1,17 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 
 class AlertApiResponse(BaseModel):
-    id: Optional[int] = None
+    rule_id: str
     name: str
-    description: Optional[str] = None
-    api: str
-    microservice: str
+    enabled: bool = False
+    tags: List[str] = Field(default_factory=list)
     severity: Optional[str] = None
     notification_channel: Optional[str] = None
-    environments: List[str] = Field(default_factory=list)
+    apis_alertadas: List[str] = Field(default_factory=list)
+    message: Optional[str] = None
 
 
 class DefaultAlertApiViewResponse(BaseModel):
@@ -30,4 +30,5 @@ class ApiSolutionViewResponse(BaseModel):
     app: str
     default_alerts: List[DefaultAlertApiViewResponse] = Field(default_factory=list)
     adhoc_alerts: List[AlertApiResponse] = Field(default_factory=list)
+    api_microservice_map: Dict[str, str] = Field(default_factory=dict)
     channels: List[str] = Field(default_factory=list)

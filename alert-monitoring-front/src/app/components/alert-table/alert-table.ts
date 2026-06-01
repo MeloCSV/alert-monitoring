@@ -33,6 +33,7 @@ export class AlertTableComponent implements OnInit {
   private apiDefaultData: DefaultAlertApiView[] = [];
   private apiAdhocData: AlertApi[] = [];
   apiChannels: string[] = [];
+  apiMicroserviceMap: Record<string, string> = {};
   apiSolutionLoading = false;
   apiSolutionError = false;
 
@@ -197,6 +198,7 @@ export class AlertTableComponent implements OnInit {
       this.apiDefaultData = [];
       this.apiAdhocData = [];
       this.apiChannels = [];
+      this.apiMicroserviceMap = {};
       this.apiSolutionLoading = false;
       this.cdr.detectChanges();
       return;
@@ -209,6 +211,7 @@ export class AlertTableComponent implements OnInit {
       next: (view) => {
         this.apiDefaultData = view.default_alerts;
         this.apiAdhocData = view.adhoc_alerts;
+        this.apiMicroserviceMap = view.api_microservice_map;
         this.apiChannels = view.channels;
         this.apiSolutionLoading = false;
         this.cdr.detectChanges();
@@ -237,6 +240,15 @@ export class AlertTableComponent implements OnInit {
     if (this.channel && (d.notification_channel || '').toLowerCase() !== this.channel.toLowerCase()) return false;
     if (this.severity && (d.severity || '').toLowerCase() !== this.severity) return false;
     return true;
+  }
+
+  appApisForRule(rule: AlertApi): string[] {
+    const appApis = new Set(Object.keys(this.apiMicroserviceMap));
+    return rule.apis_alertadas.filter(a => appApis.has(a));
+  }
+
+  microserviceForApi(api: string): string {
+    return this.apiMicroserviceMap[api] || '';
   }
 
   private passesApiAdhocFilters(a: AlertApi): boolean {

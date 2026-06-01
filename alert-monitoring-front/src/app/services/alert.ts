@@ -64,14 +64,14 @@ export interface KibanaRule {
 }
 
 export interface AlertApi {
-  id: number | null;
+  rule_id: string;
   name: string;
-  description: string | null;
-  api: string;
-  microservice: string;
+  enabled: boolean;
+  tags: string[];
   severity: string | null;
   notification_channel: string | null;
-  environments: string[];
+  apis_alertadas: string[];
+  message: string | null;
 }
 
 export interface DefaultAlertApiView {
@@ -90,6 +90,7 @@ export interface ApiSolutionView {
   app: string;
   default_alerts: DefaultAlertApiView[];
   adhoc_alerts: AlertApi[];
+  api_microservice_map: Record<string, string>;
   channels: string[];
 }
 

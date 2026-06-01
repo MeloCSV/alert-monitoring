@@ -1,8 +1,8 @@
-from typing import List, Optional, Set
+from typing import Dict, List, Set
 
-from alert_monitoring.api.application.ports.driven.alert_api_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.catalog_app_api_repository_port import CatalogAppApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
+from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView, DefaultAlertApiView
 
@@ -21,9 +21,18 @@ class GetApiSolutionViewUseCase:
     def execute(self, app: str) -> ApiSolutionView:
         catalog_entries = self.catalog_app_api_repository.get_all(app=app)
         app_apis: Set[str] = {api for entry in catalog_entries for api in entry.apis}
+        api_microservice_map: Dict[str, str] = {
+            api: entry.microservice
+            for entry in catalog_entries
+            for api in entry.apis
+        }
 
-        adhoc_alerts = self.alert_api_repository.get_all(apis=list(app_apis) if app_apis else None)
-        channels = sorted({a.notification_channel for a in adhoc_alerts if a.notification_channel})
+        all_rules = self.alert_api_repository.get_all()
+        adhoc_alerts = [
+            r for r in all_rules
+            if any(a in app_apis for a in r.apis_alertadas)
+        ]
+        channels = sorted({r.notification_channel for r in adhoc_alerts if r.notification_channel})
 
         default_alerts = [
             _to_default_api_view(d, app_apis)
@@ -34,6 +43,7 @@ class GetApiSolutionViewUseCase:
             app=app,
             default_alerts=default_alerts,
             adhoc_alerts=adhoc_alerts,
+            api_microservice_map=api_microservice_map,
             channels=channels,
         )
 
