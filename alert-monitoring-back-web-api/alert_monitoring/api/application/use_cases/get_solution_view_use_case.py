@@ -33,8 +33,9 @@ class GetSolutionViewUseCase:
 
         disabled_map = {o.alert_name: o for o in self.disabled_repository.get_all(solution)}
         default_alerts = [
-            _to_default_view(d, disabled_map.get(d.raw_name))
-            for d in self.default_alert_repository.get_all()
+            v for d in self.default_alert_repository.get_all()
+            for v in [_to_default_view(d, disabled_map.get(d.raw_name))]
+            if not v.is_disabled
         ]
 
         return SolutionView(
@@ -52,7 +53,7 @@ def _to_default_view(default_alert: DefaultAlert, alert_disabled: Optional[Alert
     return DefaultAlertView(
         raw_name=default_alert.raw_name,
         name=default_alert.display_name,
-        description=default_alert.display_description,
+        description=default_alert.display_description or default_alert.raw_description,
         severity=default_alert.severity,
         notification_channel=default_alert.notification_channel,
         environments=["pro"],

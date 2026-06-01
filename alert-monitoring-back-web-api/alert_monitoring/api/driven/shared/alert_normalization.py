@@ -77,6 +77,63 @@ DEFAULT_ALERT_DISPLAY: Dict[str, Tuple[str, str]] = {
         "HPA en máximo de réplicas durante más de 1 hora",
         "El autoescalador horizontal (HPA) lleva más de 1 hora con el número máximo de réplicas activas. No puede escalar más y el sistema podría estar bajo una presión sostenida.",
     ),
+    # Kibana global alerts
+    "Errores Totales 15% GCP (old)": (
+        "Errores Totales 15% GCP (old)",
+        "Errores 5XX totales en GCP ha llegado al 15% en los últimos 10 segundos.",
+    ),
+    "Errores Totales 15% OCP [old]": (
+        "Errores Totales 15% OCP [old]",
+        "Errores 5XX totales en OCP ha llegado al 15% en los últimos 10 segundos.",
+    ),
+    "Errores Totales 15% OCP SOAP [old]": (
+        "Errores Totales 15% OCP SOAP [old]",
+        "Errores 5XX totales en OCP (SOAP) ha llegado al 15% en los últimos 10 segundos.",
+    ),
+    "SLAs - Test": (
+        "SLAs - Test",
+        "La duración de las peticiones está superando el SLA definido.",
+    ),
+    "SLAs - Deterioro del servicio": (
+        "SLAs - Deterioro del servicio",
+        "La latencia de las peticiones ha superado el SLA definido del servicio.",
+    ),
+    "Errores Totales 15% GCP": (
+        "Errores Totales 15% GCP",
+        "Errores 5XX totales en GCP ha llegado al 15% en los últimos 2 minutos.",
+    ),
+    "Errores Totales 15% OCP SOAP": (
+        "Errores Totales 15% OCP SOAP",
+        "Errores 5XX totales en OCP (SOAP) ha llegado al 15% en los últimos 2 minutos.",
+    ),
+    "Errores 500 por API y método": (
+        "Errores 500 por API y método",
+        "El ratio de errores 5XX ha superado el umbral para una API y método concretos.",
+    ),
+    "Errores 500 por pod [OCP] [SOAP]": (
+        "Errores 500 por pod [OCP] [SOAP]",
+        "El ratio de errores en un pod de OCP (SOAP) ha alcanzado el 100%.",
+    ),
+    "Errores 500 por pod [OCP]": (
+        "Errores 500 por pod [OCP]",
+        "El ratio de errores en un pod de OCP ha alcanzado el 100%.",
+    ),
+    "Errores Totales 15% OCP": (
+        "Errores Totales 15% OCP",
+        "Errores 5XX totales en OCP ha llegado al 15% en los últimos 2 minutos.",
+    ),
+    "SLAs - Afectación del servicio": (
+        "SLAs - Afectación del servicio",
+        "La duración de las peticiones está superando el SLA definido del método.",
+    ),
+    "Errores 400 por API y método": (
+        "Errores 400 por API y método",
+        "El ratio de errores 4XX ha superado el umbral para una API y método concretos.",
+    ),
+    "Errores 500 por pod [GCP]": (
+        "Errores 500 por pod [GCP]",
+        "El ratio de errores en un pod de GCP ha alcanzado el 100%.",
+    ),
 }
 
 CANAL_DISPLAY_NAMES: Dict[str, str] = {
