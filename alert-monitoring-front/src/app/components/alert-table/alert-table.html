@@ -365,7 +365,7 @@
                             <span class="severity-tag severity-{{ (alert.severity || 'unknown').toLowerCase() }}">{{ alert.severity || 'unknown' }}</span>
                           </td>
                           <td>
-                            @for (api of appApisForRule(alert); track api) {
+                            @for (api of alert.apis_alertadas; track api) {
                               <div class="api-entry">
                                 <span class="api-path">{{ api }}</span>
                                 @if (microserviceForApi(api)) {
