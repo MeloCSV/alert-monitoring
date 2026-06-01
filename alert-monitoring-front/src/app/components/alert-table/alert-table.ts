@@ -49,14 +49,6 @@ export class AlertTableComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCatalogApps();
-    if (this.mode === 'apps') {
-      this.alertService.getBlackouts().subscribe({
-        next: (blackouts) => {
-          this.allBlackouts = blackouts;
-          this.cdr.detectChanges();
-        }
-      });
-    }
   }
 
   private loadCatalogApps(): void {
@@ -86,6 +78,7 @@ export class AlertTableComponent implements OnInit {
       this.adhocData = [];
       this.defaultData = [];
       this.channels = [];
+      this.allBlackouts = [];
       this.solutionLoading = false;
       this.cdr.detectChanges();
       return;
@@ -108,27 +101,23 @@ export class AlertTableComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+
+    // Los silencios ya vienen filtrados por solución desde el backend
+    // (única fuente de verdad del criterio de coincidencia).
+    this.alertService.getBlackouts(value).subscribe({
+      next: (blackouts) => {
+        this.allBlackouts = blackouts;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.allBlackouts = [];
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   get applicationSilences(): Blackout[] {
-    if (!this.solutionName) return [];
-    const sol = this.solutionName.toLowerCase();
-    const variants = [sol, `${sol}-back`, `${sol}-front`];
-    const appFields = new Set(['namespace', 'solucion', 'solution', 'exported_namespace',
-      'backend_target_name', 'deployment', 'replicaset', 'cronjob', 'pod']);
-    return this.allBlackouts.filter(b =>
-      b.matchers.some(m => {
-        if (!appFields.has(m.name) || !m.is_equal) return false;
-        if (m.is_regex) {
-          try {
-            const re = new RegExp(m.value, 'i');
-            return variants.some(v => re.test(v));
-          } catch { return false; }
-        }
-        const val = m.value.toLowerCase();
-        return variants.some(v => val === v || val.startsWith(`${v}-`));
-      })
-    );
+    return this.solutionName ? this.allBlackouts : [];
   }
 
   get defaultAlerts(): DefaultAlertView[] {
