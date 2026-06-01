@@ -1,0 +1,30 @@
+[
+  {
+    "parent": "absence v1",
+    "child": "RRHH-PRO"
+  },
+  {
+    "parent": "absence v2",
+    "child": "RRHH-PRO"
+  },
+  {
+    "parent": "address v1",
+    "child": "UBICA-PRO"
+  },
+  {
+    "parent": "application-criteria v1",
+    "child": "picientifico-back-web-main"
+  },
+  {
+    "parent": "application-criteria v2",
+    "child": "picientifico-back-web-main"
+  },
+  {
+    "parent": "applications v1",
+    "child": "ORGAZ-PRO"
+  },
+  {
+    "parent": "applications v2",
+    "child": "ORGAZ-PRO"
+  }
+]
