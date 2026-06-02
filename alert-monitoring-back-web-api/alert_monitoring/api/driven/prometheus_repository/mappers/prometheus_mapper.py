@@ -11,16 +11,20 @@ from alert_monitoring.api.driven.shared.alert_normalization import (
 )
 
 
+def is_default_rule(rule: PrometheusRule) -> bool:
+    return (
+        str(rule.labels.get("alertype", "")).lower() == "default"
+        and rule.group_name.lower().startswith("default")
+    )
+
+
 class PrometheusMapper:
     def to_domain(self, rules: List[PrometheusRule]) -> List[Alert]:
         return [self._map_rule(rule) for rule in rules]
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
-        is_default = (
-            str(labels.get("alertype", "")).lower() == "default"
-            and rule.group_name.lower().startswith("default")
-        )
+        is_default = is_default_rule(rule)
         raw_name = rule.alert.split()[0] if rule.alert else rule.alert
         name = raw_name if is_default else rule.alert
         description = rule.annotations.get("message", "Sin descripción")
@@ -31,7 +35,7 @@ class PrometheusMapper:
             description=description,
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
-            chips=extract_adhoc_chips(rule.expr) if alert_type == "Ad-hoc" else [],
+            chips=extract_adhoc_chips(rule.expr) if not is_default else [],
             environments=["pro"] if is_default else environments_or_all(self._infer_environments(rule)),
             microservice=self._infer_microservice(rule),
             solution=self._infer_solution(rule),
