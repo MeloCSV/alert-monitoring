@@ -119,7 +119,7 @@ def get_solution_view(
     payload = SolutionViewResponse(
         solution=view.solution,
         default_alerts=[DefaultAlertViewResponse(**d.model_dump()) for d in view.default_alerts],
-        adhoc_alerts=[AlertResponse(**a.model_dump()) for a in view.adhoc_alerts],
+        adhoc_alerts=[AlertResponse(**a.model_dump(exclude={'condition'})) for a in view.adhoc_alerts],
         channels=view.channels,
     )
     return ok_json(payload)
