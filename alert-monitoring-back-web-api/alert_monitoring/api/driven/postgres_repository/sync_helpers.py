@@ -11,7 +11,6 @@ varios repositorios:
 El comportamiento es idéntico al que tenían los repositorios; solo se elimina
 la duplicación.
 """
-from datetime import datetime
 from typing import Callable, Iterable, List, Type, TypeVar
 
 TModel = TypeVar("TModel")
@@ -25,16 +24,13 @@ def reconcile_by_key(
     *,
     key_attr: str,
     apply_fn: Callable[[TModel, TItem], None],
-    timestamp_attr: str = "synced_at",
 ) -> None:
     """Sincroniza ``model_cls`` con ``items`` usando ``key_attr`` como clave natural.
 
     - Inserta las filas cuyo ``key_attr`` no existe todavía.
     - Actualiza (vía ``apply_fn``) las que ya existen.
-    - Marca ``timestamp_attr`` con la hora actual en cada fila tocada.
     - Borra las filas existentes cuya clave no está en el lote entrante.
     """
-    now = datetime.utcnow()
     existing = {
         getattr(row, key_attr): row
         for row in session.query(model_cls).all()
@@ -47,7 +43,6 @@ def reconcile_by_key(
             row = model_cls()
             session.add(row)
         apply_fn(row, item)
-        setattr(row, timestamp_attr, now)
 
     for key, row in existing.items():
         if key not in incoming_keys:

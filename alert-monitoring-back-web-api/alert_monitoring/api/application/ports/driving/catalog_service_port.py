@@ -11,5 +11,5 @@ class CatalogServicePort(ABC):
         pass
 
     @abstractmethod
-    def get_all_catalog_apps(self, name: Optional[str] = None, csw_code: Optional[str] = None) -> List[CatalogApp]:
+    def get_all_catalog_apps(self, name: Optional[str] = None) -> List[CatalogApp]:
         pass

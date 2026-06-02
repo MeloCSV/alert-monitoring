@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 class AlertApiResponse(BaseModel):
     rule_id: str
     name: str
-    tags: List[str] = Field(default_factory=list)
     severity: Optional[str] = None
     notification_channel: Optional[str] = None
     apis_alertadas: List[str] = Field(default_factory=list)
