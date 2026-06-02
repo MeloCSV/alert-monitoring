@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from alert_monitoring.api.domain.models.kibana_rule import AlertApi
+from alert_monitoring.api.domain.models.alert_api import AlertApi
 
 
 class DefaultAlertApiView(BaseModel):

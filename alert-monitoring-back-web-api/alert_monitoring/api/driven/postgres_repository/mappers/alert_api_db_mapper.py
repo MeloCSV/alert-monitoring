@@ -1,7 +1,7 @@
 from typing import List
 
-from alert_monitoring.api.domain.models.kibana_rule import AlertApi
-from alert_monitoring.api.driven.postgres_repository.models.kibana_rule_model import AlertApiDB
+from alert_monitoring.api.domain.models.alert_api import AlertApi
+from alert_monitoring.api.driven.postgres_repository.models.alert_api_model import AlertApiDB
 
 
 class AlertApiDBMapper:

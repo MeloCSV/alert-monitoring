@@ -12,7 +12,8 @@ from alert_monitoring.api.driving.api_rest.models.alert_response import AlertRes
 from alert_monitoring.api.driving.api_rest.models.blackout_response import BlackoutResponse, BlackoutMatcherResponse
 from alert_monitoring.api.driving.api_rest.models.default_alert_response import DefaultAlertResponse
 from alert_monitoring.api.driving.api_rest.models.solution_view_response import DefaultAlertViewResponse, SolutionViewResponse
-from alert_monitoring.api.driving.api_rest.models.api_solution_view_response import AlertApiResponse, DefaultAlertApiViewResponse, ApiSolutionViewResponse
+from alert_monitoring.api.driving.api_rest.models.alert_api_response import AlertApiResponse
+from alert_monitoring.api.driving.api_rest.models.api_solution_view_response import DefaultAlertApiViewResponse, ApiSolutionViewResponse
 from alert_monitoring.api.driving.api_rest.mappers.alert_dto_mapper import AlertDTOMapper
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
@@ -117,7 +118,7 @@ def get_solution_view(
     logger.info('get_solution_view')
     view = alert_service.get_solution_view(solution)
     payload = SolutionViewResponse(
-        solution=view.solution,
+        app=view.app,
         default_alerts=[DefaultAlertViewResponse(**d.model_dump()) for d in view.default_alerts],
         adhoc_alerts=[AlertResponse(**a.model_dump()) for a in view.adhoc_alerts],
         channels=view.channels,

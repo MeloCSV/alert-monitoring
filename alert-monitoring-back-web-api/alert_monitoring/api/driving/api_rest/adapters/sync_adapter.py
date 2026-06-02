@@ -12,7 +12,7 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.application.ports.driving.catalog_app_api_service_port import CatalogAppApiServicePort
 from alert_monitoring.api.application.ports.driving.catalog_service_port import CatalogServicePort
-from alert_monitoring.api.application.ports.driving.kibana_rule_service_port import AlertApiServicePort
+from alert_monitoring.api.application.ports.driving.alert_api_service_port import AlertApiServicePort
 
 
 router = APIRouter()
@@ -57,7 +57,7 @@ def sync_global(
         futures: Dict[str, Future] = {
             "alerts_prometheus": executor.submit(_run, alert_service.sync_prometheus_alerts),
             "alerts_elastic": executor.submit(_run, alert_service.sync_elastic_alerts),
-            "alert_api": executor.submit(_run, alert_api_service.sync_kibana_rules),
+            "alert_api": executor.submit(_run, alert_api_service.sync_alert_apis),
         }
     results.update({name: future.result() for name, future in futures.items()})
 

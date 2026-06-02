@@ -2,14 +2,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-
-class AlertApiResponse(BaseModel):
-    rule_id: str
-    name: str
-    severity: Optional[str] = None
-    notification_channel: Optional[str] = None
-    apis_alertadas: List[str] = Field(default_factory=list)
-    message: Optional[str] = None
+from alert_monitoring.api.driving.api_rest.models.alert_api_response import AlertApiResponse
 
 
 class DefaultAlertApiViewResponse(BaseModel):

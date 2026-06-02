@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
-from alert_monitoring.api.application.ports.driving.kibana_rule_service_port import AlertApiServicePort
-from alert_monitoring.api.driving.api_rest.models.kibana_rule_response import AlertApiResponse
+from alert_monitoring.api.application.ports.driving.alert_api_service_port import AlertApiServicePort
+from alert_monitoring.api.driving.api_rest.models.alert_api_response import AlertApiResponse
 from alert_monitoring.api.driving.api_rest.responses import ok_json, ok_list
 
 
@@ -23,7 +23,7 @@ def sync_alert_api_rules(
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
     logger.info('sync_alert_api_rules')
-    saved = service.sync_kibana_rules()
+    saved = service.sync_alert_apis()
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={"message": "Reglas de API sincronizadas correctamente", "saved": saved},
@@ -46,5 +46,5 @@ def get_alert_api_rules(
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
     logger.info(f'get_alert_api_rules api={api}')
-    rules = service.get_rules(api=api)
+    rules = service.get_alert_apis(api=api)
     return ok_list(AlertApiResponse, rules)

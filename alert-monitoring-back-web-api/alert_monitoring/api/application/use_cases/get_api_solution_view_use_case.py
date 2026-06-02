@@ -3,7 +3,7 @@ from typing import Dict, List, Set
 
 from alert_monitoring.api.application.ports.driven.catalog_app_api_repository_port import CatalogAppApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
-from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
+from alert_monitoring.api.application.ports.driven.alert_api_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView, DefaultAlertApiView
 
