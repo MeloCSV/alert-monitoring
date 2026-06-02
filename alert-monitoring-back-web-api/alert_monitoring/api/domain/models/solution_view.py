@@ -18,7 +18,7 @@ class DefaultAlertView(BaseModel):
 
 
 class SolutionView(BaseModel):
-    solution: str
+    app: str
     default_alerts: List[DefaultAlertView] = Field(default_factory=list)
     adhoc_alerts: List[Alert] = Field(default_factory=list)
     channels: List[str] = Field(default_factory=list)

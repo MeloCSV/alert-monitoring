@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Tuple
 
-from alert_monitoring.api.domain.models.kibana_rule import AlertApi
+from alert_monitoring.api.domain.models.alert_api import AlertApi
 from alert_monitoring.api.domain.models.default_alert_api import DefaultAlertApi
 from alert_monitoring.api.driven.kibana_repository.models.kibana_config import KibanaConfig
 from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT_DISPLAY

@@ -26,7 +26,7 @@ class GetSolutionViewUseCase:
         ]
 
         return SolutionView(
-            solution=solution,
+            app=solution,
             default_alerts=default_alerts,
             adhoc_alerts=alerts,
             channels=channels,

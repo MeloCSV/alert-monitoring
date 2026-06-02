@@ -6,10 +6,10 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from sqlalchemy import cast, text
 from sqlalchemy.dialects.postgresql import JSONB
 
-from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
-from alert_monitoring.api.domain.models.kibana_rule import AlertApi
-from alert_monitoring.api.driven.postgres_repository.mappers.kibana_rule_db_mapper import AlertApiDBMapper
-from alert_monitoring.api.driven.postgres_repository.models.kibana_rule_model import AlertApiDB
+from alert_monitoring.api.application.ports.driven.alert_api_repository_port import AlertApiRepositoryPort
+from alert_monitoring.api.domain.models.alert_api import AlertApi
+from alert_monitoring.api.driven.postgres_repository.mappers.alert_api_db_mapper import AlertApiDBMapper
+from alert_monitoring.api.driven.postgres_repository.models.alert_api_model import AlertApiDB
 
 
 class AlertApiRepositoryAdapter(AlertApiRepositoryPort):

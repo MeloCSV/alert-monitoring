@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from alert_monitoring.api.domain.models.kibana_rule import AlertApi
+from alert_monitoring.api.domain.models.alert_api import AlertApi
 
 
 class AlertApiRepositoryPort(ABC):
@@ -16,8 +16,4 @@ class AlertApiRepositoryPort(ABC):
 
     @abstractmethod
     def get_all(self, api: Optional[str] = None) -> List[AlertApi]:
-        ...
-
-    @abstractmethod
-    def get_distinct_apis(self) -> List[str]:
         ...
