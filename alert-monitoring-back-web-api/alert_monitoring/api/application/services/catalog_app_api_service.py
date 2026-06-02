@@ -7,6 +7,7 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 from alert_monitoring.api.application.ports.driven.catalog_app_api_repository_port import CatalogAppApiRepositoryPort
 from alert_monitoring.api.application.ports.driven.catalog_app_repository_port import CatalogAppRepositoryPort
 from alert_monitoring.api.application.ports.driving.catalog_app_api_service_port import CatalogAppApiServicePort
+from alert_monitoring.api.application.services.catalog_lookup import build_catalog_lookup
 from alert_monitoring.api.domain.models.catalog_app_api import CatalogAppApi
 from alert_monitoring.api.driven.file_repository.adapters.catalog_app_api_file_adapter import CatalogAppApiFileAdapter
 
@@ -39,8 +40,7 @@ class CatalogAppApiService(CatalogAppApiServicePort):
         return self.repository.get_all(app=app)
 
     def _build_catalog_lookup(self) -> Dict[str, str]:
-        """Devuelve un dict {nombre_en_minúsculas: nombre_canónico} de catalog_apps."""
-        return {a.name.lower(): a.name for a in self.catalog_app_repository.get_all()}
+        return build_catalog_lookup(self.catalog_app_repository)
 
     def _process_entries(self, entries: List[dict], catalog_lookup: Dict[str, str]) -> List[CatalogAppApi]:
         """Agrupa las entradas por microservicio y filtra solo apps CNA."""

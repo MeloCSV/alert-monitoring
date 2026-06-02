@@ -2,7 +2,6 @@ from typing import List, Optional
 from logging import Logger
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
@@ -10,6 +9,7 @@ from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
 
 from alert_monitoring.api.application.ports.driving.catalog_service_port import CatalogServicePort
 from alert_monitoring.api.driving.api_rest.models.catalog_app_response import CatalogAppResponse
+from alert_monitoring.api.driving.api_rest.responses import ok_list
 
 
 router = APIRouter()
@@ -39,8 +39,4 @@ def get_catalog_apps(
 ) -> JSONResponse:
     logger.info("get_catalog_apps")
     apps = catalog_service.get_all_catalog_apps(name=name, csw_code=csw_code)
-    payload = [CatalogAppResponse(**a.model_dump()) for a in apps]
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content=jsonable_encoder(payload),
-    )
+    return ok_list(CatalogAppResponse, apps)
