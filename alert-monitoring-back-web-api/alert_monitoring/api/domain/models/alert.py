@@ -6,6 +6,7 @@ class Alert(BaseModel):
     description: str = Field(..., description="Descripción de la alerta")
     source_tool: Optional[str] = Field(None, description="Herramienta origen: Prometheus o Elastic")
     severity: str = Field(..., description="Nivel de severidad (Critical, Warning, etc.)")
+    condition: Optional[str] = Field(None, description="Expresión PromQL. Solo alertas Por Defecto, uso interno del sync.")
     environments: Optional[List[str]] = Field(default_factory=list, description="Entornos: LAB, PRE, PRO")
     microservice: Optional[str] = Field(None, description="Microservicio al que pertenece")
     solution: Optional[str] = Field(None, description="PI frabricado")
