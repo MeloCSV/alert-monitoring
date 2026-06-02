@@ -11,7 +11,7 @@ class AlertDB(SQLModel, table=True):
     description: str
     source_tool: str
     severity: str
-    condition: str
+    chips: List[str] = Field(default=[], sa_column=Column(JSON))
     environments: List[str] = Field(default=[], sa_column=Column(JSON))
     microservice: Optional[str] = None
     solution: Optional[str] = None
