@@ -236,7 +236,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (alert of adhocAlerts; track alert.name + '-' + alert.condition) {
+                      @for (alert of adhocAlerts; track alert.name) {
                         <tr>
                           <td>
                             <div class="alert-name">{{ alert.name }}</div>
