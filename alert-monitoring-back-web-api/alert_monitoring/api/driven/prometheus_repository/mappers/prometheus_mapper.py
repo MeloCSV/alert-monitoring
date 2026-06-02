@@ -5,9 +5,12 @@ from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.driven.shared.alert_normalization import (
     BOOL_CHANNEL_LABELS,
+    JOB_LABEL_KEYS,
+    NAMESPACE_LABEL_KEYS,
     display_canal,
     environments_or_all,
     extract_adhoc_chips,
+    extract_label_alternatives,
 )
 
 
@@ -31,8 +34,10 @@ class PrometheusMapper:
             description=description,
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
-            condition=rule.expr if is_default else None,
             chips=extract_adhoc_chips(rule.expr) if not is_default else [],
+            excl_ns=extract_label_alternatives(rule.expr, NAMESPACE_LABEL_KEYS, exclude=True) if is_default else [],
+            incl_ns=extract_label_alternatives(rule.expr, NAMESPACE_LABEL_KEYS, exclude=False) if is_default else [],
+            excl_jobs=extract_label_alternatives(rule.expr, JOB_LABEL_KEYS, exclude=True) if is_default else [],
             environments=["pro"] if is_default else environments_or_all(self._infer_environments(rule)),
             microservice=self._infer_microservice(rule),
             solution=self._infer_solution(rule),

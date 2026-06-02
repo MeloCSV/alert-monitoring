@@ -214,9 +214,9 @@ def build_exclusion_updates(default_alert_rules) -> dict:
         if not raw_name:
             continue
         bucket = buckets[raw_name]
-        bucket["excl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=True))
-        bucket["incl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=False))
-        bucket["excl_jobs"].update(extract_label_alternatives(alert.condition, JOB_LABEL_KEYS, exclude=True))
+        bucket["excl_ns"].update(alert.excl_ns)
+        bucket["incl_ns"].update(alert.incl_ns)
+        bucket["excl_jobs"].update(alert.excl_jobs)
     return {
         raw_name: (sorted(b["excl_ns"]), sorted(b["incl_ns"]), sorted(b["excl_jobs"]))
         for raw_name, b in buckets.items()
