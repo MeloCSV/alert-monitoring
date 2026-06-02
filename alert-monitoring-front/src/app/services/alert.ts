@@ -4,10 +4,7 @@ import { Observable } from 'rxjs';
 
 export interface CatalogApp {
   object_id: string;
-  object_key: string;
   name: string;
-  csw_code: string | null;
-  platform: string | null;
 }
 
 export interface Alert {
@@ -48,7 +45,6 @@ export interface Blackout {
 export interface AlertApi {
   rule_id: string;
   name: string;
-  tags: string[];
   severity: string | null;
   notification_channel: string | null;
   apis_alertadas: string[];

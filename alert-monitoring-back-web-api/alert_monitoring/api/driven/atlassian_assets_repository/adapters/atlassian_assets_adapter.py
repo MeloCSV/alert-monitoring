@@ -4,7 +4,6 @@ from typing import List
 from alert_monitoring.api.domain.models.catalog_app import CatalogApp
 from alert_monitoring.api.driven.atlassian_assets_repository.clients.atlassian_assets_http_client import (
     AtlassianAssetsHttpClient,
-    ATTR_CSW_CODE,
     ATTR_PLATFORM,
 )
 from alert_monitoring.api.driven.atlassian_assets_repository.config.atlassian_assets_settings import load_atlassian_assets_config
@@ -27,7 +26,6 @@ class AtlassianAssetsAdapter:
 
         for obj in raw_objects:
             object_id = obj.get("id")
-            object_key = obj.get("objectKey")
             name = obj.get("label") or obj.get("name")
 
             if not object_id or not name:
@@ -35,19 +33,13 @@ class AtlassianAssetsAdapter:
                 continue
 
             attributes = obj.get("attributes", [])
-            csw_code = self.client.extract_attribute(attributes, ATTR_CSW_CODE)
-            platform = self.client.extract_attribute(attributes, ATTR_PLATFORM)
-
-            if not platform:
+            if not self.client.extract_attribute(attributes, ATTR_PLATFORM):
                 logger.debug("Aplicación '%s' sin plataforma (legacy), ignorada.", name)
                 continue
 
             apps.append(CatalogApp(
                 object_id=str(object_id),
-                object_key=object_key or "",
                 name=name,
-                csw_code=csw_code,
-                platform=platform,
             ))
 
         return apps

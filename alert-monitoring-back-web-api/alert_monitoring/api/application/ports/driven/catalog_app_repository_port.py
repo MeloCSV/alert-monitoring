@@ -11,5 +11,5 @@ class CatalogAppRepositoryPort(ABC):
         pass
 
     @abstractmethod
-    def get_all(self, name: Optional[str] = None, csw_code: Optional[str] = None) -> List[CatalogApp]:
+    def get_all(self, name: Optional[str] = None) -> List[CatalogApp]:
         pass

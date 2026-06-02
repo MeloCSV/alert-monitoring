@@ -1,7 +1,6 @@
-from typing import List, Optional
+from typing import Optional
 
-from sqlalchemy import JSON
-from sqlmodel import Column, Field, SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class AlertApiDB(SQLModel, table=True):
@@ -11,7 +10,6 @@ class AlertApiDB(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     rule_id: str = Field(index=True)
     name: str
-    tags: List[str] = Field(default=[], sa_column=Column(JSON))
     severity: Optional[str] = None
     notification_channel: Optional[str] = None
     apis_alertadas: List[str] = Field(default=[], sa_column=Column(JSON))

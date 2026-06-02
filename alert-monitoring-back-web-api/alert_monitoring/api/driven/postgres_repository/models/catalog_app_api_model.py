@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import JSON
@@ -13,4 +12,3 @@ class CatalogAppApiDB(SQLModel, table=True):
     app: str = Field(index=True)
     microservice: str = Field(unique=True)
     apis: List[str] = Field(default=[], sa_column=Column(JSON))
-    synced_at: datetime = Field(default_factory=datetime.utcnow)

@@ -33,10 +33,9 @@ def sync_catalog(
 @router.get('/catalog', tags=['catalog'], response_model=List[CatalogAppResponse], responses=_ERROR_500)
 def get_catalog_apps(
     name: Optional[str] = Query(None, description="Filtra por nombre de aplicación (coincidencia parcial)"),
-    csw_code: Optional[str] = Query(None, description="Filtra por código CSW (coincidencia parcial)"),
     catalog_service: CatalogServicePort = Depends(Injector.instance(CatalogServicePort)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),
 ) -> JSONResponse:
     logger.info("get_catalog_apps")
-    apps = catalog_service.get_all_catalog_apps(name=name, csw_code=csw_code)
+    apps = catalog_service.get_all_catalog_apps(name=name)
     return ok_list(CatalogAppResponse, apps)

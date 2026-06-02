@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
@@ -9,8 +8,4 @@ class CatalogAppDB(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     object_id: str = Field(unique=True)
-    object_key: str
     name: str = Field(index=True)
-    csw_code: Optional[str] = Field(default=None, index=True)
-    platform: Optional[str] = None
-    synced_at: datetime = Field(default_factory=datetime.utcnow)
