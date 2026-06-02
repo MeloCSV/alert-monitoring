@@ -1,10 +1,9 @@
-from typing import List, Optional
+import re
+from typing import List, Set, Tuple
 
-from alert_monitoring.api.application.ports.driven.alert_disabled_repository_port import AlertDisabledRepositoryPort
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
-from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import DefaultAlertView, SolutionView
 from alert_monitoring.api.driven.shared.alert_normalization import extract_adhoc_chips
@@ -14,11 +13,9 @@ class GetSolutionViewUseCase:
     def __init__(
         self,
         alert_repository: AlertRepositoryPort,
-        disabled_repository: AlertDisabledRepositoryPort,
         default_alert_repository: DefaultAlertRepositoryPort,
     ):
         self.alert_repository = alert_repository
-        self.disabled_repository = disabled_repository
         self.default_alert_repository = default_alert_repository
 
     def execute(self, solution: str) -> SolutionView:
@@ -31,9 +28,9 @@ class GetSolutionViewUseCase:
         for alert in alerts:
             alert.chips = extract_adhoc_chips(alert.condition)
 
-        disabled_map = {o.alert_name: o for o in self.disabled_repository.get_all(solution)}
+        micros = {a.microservice for a in alerts if a.microservice}
         default_alerts = [
-            _to_default_view(d, disabled_map.get(d.raw_name))
+            _to_default_view(d, solution, micros)
             for d in self.default_alert_repository.get_all()
         ]
 
@@ -45,10 +42,8 @@ class GetSolutionViewUseCase:
         )
 
 
-def _to_default_view(default_alert: DefaultAlert, alert_disabled: Optional[AlertDisabled]) -> DefaultAlertView:
-    is_disabled = bool(alert_disabled and alert_disabled.is_disabled)
-    is_partial = bool(alert_disabled and not alert_disabled.is_disabled and alert_disabled.is_partial)
-    chips = [] if not alert_disabled or alert_disabled.is_disabled else alert_disabled.excluded_items
+def _to_default_view(default_alert: DefaultAlert, solution: str, micros: Set[str]) -> DefaultAlertView:
+    is_disabled, is_partial, chips = _evaluate(default_alert, solution, micros)
     return DefaultAlertView(
         raw_name=default_alert.raw_name,
         name=default_alert.display_name,
@@ -60,3 +55,95 @@ def _to_default_view(default_alert: DefaultAlert, alert_disabled: Optional[Alert
         is_partial=is_partial,
         chips=chips,
     )
+
+
+def _evaluate(default_alert: DefaultAlert, solution: str, micros: Set[str]) -> Tuple[bool, bool, List[str]]:
+    ns_fully_excluded = False
+    ns_re_included = False
+    partially_excluded = False
+    excluded_items: List[str] = []
+
+    targets = {solution} | micros
+
+    for alt in default_alert.excluded_namespaces:
+        matched_target = False
+        for target in targets:
+            if _regex_matches(target, alt):
+                ns_fully_excluded = True
+                matched_target = True
+            elif _is_prefix_of(target, alt):
+                partially_excluded = True
+                matched_target = True
+        if matched_target:
+            _append_unique(excluded_items, _display_pattern(alt))
+
+    for incl in default_alert.included_namespaces:
+        for target in targets:
+            if _regex_matches(target, incl):
+                ns_re_included = True
+                break
+
+    excluded_items = [
+        item for item in excluded_items
+        if not any(_regex_matches(item, incl) for incl in default_alert.included_namespaces)
+    ]
+
+    for alt in default_alert.excluded_jobs:
+        matched_target = False
+        for target in targets:
+            if _is_prefix_of(target, alt):
+                partially_excluded = True
+                matched_target = True
+                break
+        if matched_target:
+            _append_unique(excluded_items, _display_pattern(alt))
+
+    is_disabled = ns_fully_excluded and not ns_re_included
+    is_partial = partially_excluded and not is_disabled
+    if is_disabled:
+        excluded_items = []
+    return is_disabled, is_partial, excluded_items
+
+
+def _append_unique(items: List[str], value: str) -> None:
+    if value and value not in items:
+        items.append(value)
+
+
+def _display_pattern(alternative: str) -> str:
+    cleaned = alternative.strip()
+    for suffix in (".*", ".+"):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[: -len(suffix)]
+    return cleaned.rstrip("-").strip() or alternative
+
+
+def _regex_matches(value: str, pattern: str) -> bool:
+    try:
+        return re.fullmatch(f"(?:{pattern})", value, re.IGNORECASE) is not None
+    except re.error:
+        return False
+
+
+def _literal_prefix(alternative: str) -> str:
+    out: list[str] = []
+    i = 0
+    while i < len(alternative):
+        ch = alternative[i]
+        if ch == "\\" and i + 1 < len(alternative):
+            out.append(alternative[i + 1])
+            i += 2
+            continue
+        if ch in ".*+?()[]{}|^$":
+            break
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _is_prefix_of(target: str, alternative: str) -> bool:
+    if not target:
+        return False
+    lit = _literal_prefix(alternative).lower()
+    prefix = f"{target.lower()}-"
+    return lit.startswith(prefix)
