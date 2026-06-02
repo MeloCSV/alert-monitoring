@@ -57,7 +57,7 @@ def get_all_alerts(
     severity: Optional[str] = Query(None, description="Warning, Critical o Principal"),
     environments: Optional[List[str]] = Query(None, description="Entornos: dev, itg, pre, pro"),
     microservice: Optional[str] = Query(None, description="Filtra por microservicio (coincidencia parcial)"),
-    solution: Optional[str] = Query(None, description="Filtra por solución (coincidencia parcial)"),
+    solution: Optional[str] = Query(None, description="Filtra por solución (coincidencia exacta)"),
     alert_service: AlertServicePort = Depends(Injector.instance(AlertServicePort)),
     api_rest_mapper: AlertDTOMapper = Depends(Injector.instance(AlertDTOMapper)),
     logger: Logger = Depends(Injector.instance(LoggerSetup, "LoggerSetup.get_logger")),

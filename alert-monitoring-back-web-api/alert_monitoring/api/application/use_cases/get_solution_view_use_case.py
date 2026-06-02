@@ -19,10 +19,7 @@ class GetSolutionViewUseCase:
         self.default_alert_repository = default_alert_repository
 
     def execute(self, solution: str) -> SolutionView:
-        alerts = [
-            a for a in self.alert_repository.get_all(AlertFilter(solution=solution))
-            if a.solution == solution
-        ]
+        alerts = self.alert_repository.get_all(AlertFilter(solution=solution))
         channels = sorted({a.notification_channel for a in alerts if a.notification_channel})
 
         for alert in alerts:

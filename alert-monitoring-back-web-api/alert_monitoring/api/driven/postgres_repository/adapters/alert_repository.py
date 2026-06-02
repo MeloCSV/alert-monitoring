@@ -45,7 +45,7 @@ class AlertRepositoryAdapter(AlertRepositoryPort):
             if filters.microservice:
                 query = query.filter(AlertDB.microservice.ilike(f"%{filters.microservice}%"))
             if filters.solution:
-                query = query.filter(AlertDB.solution.ilike(f"%{filters.solution}%"))
+                query = query.filter(AlertDB.solution == filters.solution)
 
         alerts_db = query.all()
 
