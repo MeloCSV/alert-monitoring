@@ -90,12 +90,10 @@ class KibanaRuleMapper:
     def _map_adhoc_rule(self, raw: dict, config: KibanaConfig) -> AlertApi:
         actions = raw.get("actions") or []
         params = raw.get("params") or {}
-        tags = [str(t) for t in (raw.get("tags") or []) if t]
         positive_apis, _ = self._extract_apis_split(params)
         return AlertApi(
             rule_id=str(raw.get("id") or ""),
             name=str(raw.get("name") or ""),
-            tags=tags,
             severity=self._infer_severity(actions),
             notification_channel=self._infer_channel(actions),
             apis_alertadas=positive_apis,

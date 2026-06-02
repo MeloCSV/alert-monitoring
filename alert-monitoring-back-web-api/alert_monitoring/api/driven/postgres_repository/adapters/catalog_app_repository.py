@@ -32,18 +32,13 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
     @staticmethod
     def _apply(row: CatalogAppDB, app: CatalogApp) -> None:
         row.object_id = app.object_id
-        row.object_key = app.object_key
         row.name = app.name
-        row.csw_code = app.csw_code
-        row.platform = app.platform
 
-    def get_all(self, name: Optional[str] = None, csw_code: Optional[str] = None) -> List[CatalogApp]:
-        self.logger.info(f"Consultando catálogo name={name} csw_code={csw_code}")
+    def get_all(self, name: Optional[str] = None) -> List[CatalogApp]:
+        self.logger.info(f"Consultando catálogo name={name}")
         query = self.sqlalchemy_repository.query(CatalogAppDB)
 
         if name:
             query = query.filter(CatalogAppDB.name.ilike(f"%{name}%"))
-        if csw_code:
-            query = query.filter(CatalogAppDB.csw_code.ilike(f"%{csw_code}%"))
 
         return self.catalog_app_db_mapper.to_domain_list(query.order_by(CatalogAppDB.name).all())

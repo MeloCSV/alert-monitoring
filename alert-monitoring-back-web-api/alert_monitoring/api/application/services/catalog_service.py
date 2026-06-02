@@ -23,6 +23,6 @@ class CatalogService(CatalogServicePort):
         self.catalog_app_repository.save_all(apps)
         return len(apps)
 
-    def get_all_catalog_apps(self, name: Optional[str] = None, csw_code: Optional[str] = None) -> List[CatalogApp]:
-        self.logger.info(f"get_all_catalog_apps name={name} csw_code={csw_code}")
-        return self.catalog_app_repository.get_all(name=name, csw_code=csw_code)
+    def get_all_catalog_apps(self, name: Optional[str] = None) -> List[CatalogApp]:
+        self.logger.info(f"get_all_catalog_apps name={name}")
+        return self.catalog_app_repository.get_all(name=name)
