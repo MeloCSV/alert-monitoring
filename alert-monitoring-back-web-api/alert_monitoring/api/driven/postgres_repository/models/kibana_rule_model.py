@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import List, Optional
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
 
 
 class AlertApiDB(SQLModel, table=True):
