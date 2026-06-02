@@ -1,3 +1,0 @@
-ALTER TABLE default_alerts RENAME TO default_alert_app;
-ALTER TABLE default_alert_app RENAME CONSTRAINT default_alerts_pkey TO default_alert_app_pkey;
-ALTER TABLE default_alert_app RENAME CONSTRAINT default_alerts_raw_name_key TO default_alert_app_raw_name_key;

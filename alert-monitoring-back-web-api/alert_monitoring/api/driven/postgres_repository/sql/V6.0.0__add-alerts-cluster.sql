@@ -1,1 +1,0 @@
-ALTER TABLE public.alerts ADD COLUMN cluster VARCHAR(255) NULL;
