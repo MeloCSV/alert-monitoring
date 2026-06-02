@@ -6,8 +6,6 @@ from alert_monitoring.api.application.ports.driven.default_alert_repository_port
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import DefaultAlertView, SolutionView
-from alert_monitoring.api.driven.shared.alert_normalization import extract_adhoc_chips
-
 
 class GetSolutionViewUseCase:
     def __init__(
@@ -21,10 +19,6 @@ class GetSolutionViewUseCase:
     def execute(self, solution: str) -> SolutionView:
         alerts = self.alert_repository.get_all(AlertFilter(solution=solution))
         channels = sorted({a.notification_channel for a in alerts if a.notification_channel})
-
-        for alert in alerts:
-            alert.chips = extract_adhoc_chips(alert.condition)
-
         micros = {a.microservice for a in alerts if a.microservice}
         default_alerts = [
             _to_default_view(d, solution, micros)

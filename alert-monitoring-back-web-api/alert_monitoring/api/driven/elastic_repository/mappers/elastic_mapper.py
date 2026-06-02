@@ -24,7 +24,6 @@ class ElasticMapper:
             description=rule.description or "Sin descripción",
             source_tool="Elastic",
             severity=labels.get("severity") or "unknown",
-            condition=rule.condition,
             environments=environments_or_all(rule.environments),
             microservice=self._infer_microservice(rule),
             solution=labels.get("application"),

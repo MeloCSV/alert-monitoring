@@ -12,7 +12,6 @@ export interface Alert {
   description: string;
   source_tool: string | null;
   severity: string;
-  condition: string;
   environments: string[];
   microservice: string | null;
   solution: string | null;

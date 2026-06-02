@@ -7,6 +7,7 @@ from alert_monitoring.api.driven.shared.alert_normalization import (
     BOOL_CHANNEL_LABELS,
     display_canal,
     environments_or_all,
+    extract_adhoc_chips,
 )
 
 
@@ -24,17 +25,18 @@ class PrometheusMapper:
         name = raw_name if is_default else rule.alert
         description = rule.annotations.get("message", "Sin descripción")
 
+        alert_type = "Por Defecto" if is_default else "Ad-hoc"
         return Alert(
             name=name,
             description=description,
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
-            condition=rule.expr,
-            environments= ["pro"] if is_default else environments_or_all(self._infer_environments(rule)),
-            microservice= self._infer_microservice(rule),
+            chips=extract_adhoc_chips(rule.expr) if alert_type == "Ad-hoc" else [],
+            environments=["pro"] if is_default else environments_or_all(self._infer_environments(rule)),
+            microservice=self._infer_microservice(rule),
             solution=self._infer_solution(rule),
             notification_channel=self._infer_channel(labels),
-            alert_type="Por Defecto" if is_default else "Ad-hoc",
+            alert_type=alert_type,
             cluster=rule.cluster_name or None,
             prometheus_name=raw_name if is_default else None,
         )

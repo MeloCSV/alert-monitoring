@@ -7,7 +7,6 @@ class AlertResponse(BaseModel):
     description: str
     source_tool: str
     severity: str
-    condition: str
     environments: List[str]
     microservice: Optional[str] = None
     solution: Optional[str] = None
