@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Tuple
 
 ALL_ENVIRONMENTS: Tuple[str, ...] = ("dev", "itg", "pre", "pro")
@@ -204,6 +205,23 @@ def extract_label_alternatives(expr: Optional[str], keys: Iterable[str], exclude
                 if part and part not in alternatives:
                     alternatives.append(part)
     return alternatives
+
+
+def build_exclusion_updates(default_alert_rules) -> dict:
+    """Merge exclusion patterns from all default alert rule instances grouped by raw_name."""
+    buckets: dict[str, dict] = defaultdict(lambda: {"excl_ns": set(), "incl_ns": set(), "excl_jobs": set()})
+    for alert in default_alert_rules:
+        raw_name = alert.prometheus_name
+        if not raw_name:
+            continue
+        bucket = buckets[raw_name]
+        bucket["excl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=True))
+        bucket["incl_ns"].update(extract_label_alternatives(alert.condition, NAMESPACE_LABEL_KEYS, exclude=False))
+        bucket["excl_jobs"].update(extract_label_alternatives(alert.condition, JOB_LABEL_KEYS, exclude=True))
+    return {
+        raw_name: (sorted(b["excl_ns"]), sorted(b["incl_ns"]), sorted(b["excl_jobs"]))
+        for raw_name, b in buckets.items()
+    }
 
 
 def clean_label_value(value: str) -> str:

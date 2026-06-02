@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
-from alert_monitoring.api.domain.models.alert_disabled import AlertDisabled
 from alert_monitoring.api.domain.models.blackout import Blackout
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import SolutionView
@@ -21,10 +20,6 @@ class AlertServicePort(ABC):
 
     @abstractmethod
     def get_all_alerts(self, filters: Optional[AlertFilter] = None) -> List[Alert]:
-        pass
-
-    @abstractmethod
-    def get_alert_disabled(self, solution: Optional[str] = None) -> List[AlertDisabled]:
         pass
 
     @abstractmethod
