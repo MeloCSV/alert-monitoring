@@ -42,9 +42,8 @@ class GetApiSolutionViewUseCase:
         channels = sorted({r.notification_channel for r in adhoc_alerts if r.notification_channel})
 
         default_alerts = [
-            v for d in self.default_alert_api_repository.get_all()
-            for v in [_to_default_api_view(d, app_apis)]
-            if not v.is_disabled
+            _to_default_api_view(d, app_apis)
+            for d in self.default_alert_api_repository.get_all()
         ]
 
         return ApiSolutionView(
