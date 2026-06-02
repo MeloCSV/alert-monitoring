@@ -64,7 +64,8 @@ class KibanaRuleMapper:
                     if bool(raw.get("enabled", True)):
                         defaults.append(self._map_global_rule(raw, config))
                 else:
-                    adhoc.append(self._map_adhoc_rule(raw, config))
+                    if bool(raw.get("enabled", False)):
+                        adhoc.append(self._map_adhoc_rule(raw, config))
             except Exception as exc:
                 logger.warning("Error mapeando regla Kibana '%s': %s", raw.get("name", "?"), exc)
         return defaults, adhoc
@@ -94,7 +95,6 @@ class KibanaRuleMapper:
         return AlertApi(
             rule_id=str(raw.get("id") or ""),
             name=str(raw.get("name") or ""),
-            enabled=bool(raw.get("enabled", False)),
             tags=tags,
             severity=self._infer_severity(actions),
             notification_channel=self._infer_channel(actions),

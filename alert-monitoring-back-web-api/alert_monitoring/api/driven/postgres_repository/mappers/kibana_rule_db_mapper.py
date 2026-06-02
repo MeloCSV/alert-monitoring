@@ -10,7 +10,6 @@ class AlertApiDBMapper:
         return AlertApiDB(
             rule_id=rule.rule_id,
             name=rule.name,
-            enabled=rule.enabled,
             tags=rule.tags,
             severity=rule.severity,
             notification_channel=rule.notification_channel,
@@ -22,7 +21,6 @@ class AlertApiDBMapper:
         return AlertApi(
             rule_id=rule_db.rule_id,
             name=rule_db.name,
-            enabled=rule_db.enabled,
             tags=rule_db.tags or [],
             severity=rule_db.severity,
             notification_channel=rule_db.notification_channel,

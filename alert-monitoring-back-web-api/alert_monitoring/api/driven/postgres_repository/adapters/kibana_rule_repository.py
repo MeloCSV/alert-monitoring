@@ -3,6 +3,8 @@ from typing import List, Optional
 from fwkpy_lib_core.common.injector import inject
 from fwkpy_lib_database.synchronous.datasource import DataSourceManager
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
+from sqlalchemy import cast, text
+from sqlalchemy.dialects.postgresql import JSONB
 
 from alert_monitoring.api.application.ports.driven.kibana_rule_repository_port import AlertApiRepositoryPort
 from alert_monitoring.api.domain.models.kibana_rule import AlertApi
@@ -30,18 +32,13 @@ class AlertApiRepositoryAdapter(AlertApiRepositoryPort):
         self.sqlalchemy_repository.commit()
 
     def get_all(self, api: Optional[str] = None) -> List[AlertApi]:
-        rules_db = self.sqlalchemy_repository.query(AlertApiDB).all()
-
+        query = self.sqlalchemy_repository.query(AlertApiDB)
         if api:
-            api_lower = api.lower()
-            rules_db = [r for r in rules_db if r.apis_alertadas and any(a.lower() == api_lower for a in r.apis_alertadas)]
-
-        return self.alert_api_db_mapper.to_domain_list(rules_db)
+            query = query.filter(cast(AlertApiDB.apis_alertadas, JSONB).contains([api]))
+        return self.alert_api_db_mapper.to_domain_list(query.all())
 
     def get_distinct_apis(self) -> List[str]:
-        rules_db = self.sqlalchemy_repository.query(AlertApiDB).all()
-        apis: set[str] = set()
-        for r in rules_db:
-            for api in (r.apis_alertadas or []):
-                apis.add(api)
-        return sorted(apis)
+        rows = self.sqlalchemy_repository.execute(
+            text("SELECT DISTINCT value FROM alert_api, jsonb_array_elements_text(apis_alertadas::jsonb) AS value ORDER BY value")
+        )
+        return [row[0] for row in rows]

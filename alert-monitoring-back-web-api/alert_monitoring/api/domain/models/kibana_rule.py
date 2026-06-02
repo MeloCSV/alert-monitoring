@@ -5,7 +5,6 @@ from typing import List, Optional
 class AlertApi(BaseModel):
     rule_id: str = Field(..., description="ID de la regla en Kibana")
     name: str = Field(..., description="Nombre de la regla")
-    enabled: bool = Field(default=False, description="Si la regla está habilitada en Kibana")
     tags: List[str] = Field(default_factory=list, description="Tags de la regla")
     severity: Optional[str] = Field(None, description="Severidad inferida de las acciones")
     notification_channel: Optional[str] = Field(None, description="Canal de notificación más restrictivo inferido de las acciones")

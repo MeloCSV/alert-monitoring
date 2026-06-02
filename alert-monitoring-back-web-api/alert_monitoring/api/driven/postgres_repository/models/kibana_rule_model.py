@@ -11,7 +11,6 @@ class AlertApiDB(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     rule_id: str = Field(index=True)
     name: str
-    enabled: bool = Field(default=False)
     tags: List[str] = Field(default=[], sa_column=Column(JSON))
     severity: Optional[str] = None
     notification_channel: Optional[str] = None

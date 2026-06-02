@@ -48,7 +48,6 @@ export interface Blackout {
 export interface AlertApi {
   rule_id: string;
   name: string;
-  enabled: boolean;
   tags: string[];
   severity: string | null;
   notification_channel: string | null;

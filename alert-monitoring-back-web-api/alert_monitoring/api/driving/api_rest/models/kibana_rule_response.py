@@ -6,7 +6,6 @@ from pydantic import BaseModel
 class AlertApiResponse(BaseModel):
     rule_id: str
     name: str
-    enabled: bool
     tags: List[str]
     severity: Optional[str]
     notification_channel: Optional[str]
