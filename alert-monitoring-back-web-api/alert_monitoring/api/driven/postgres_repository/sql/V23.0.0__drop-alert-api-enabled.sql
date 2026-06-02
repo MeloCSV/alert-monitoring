@@ -1,0 +1,1 @@
+ALTER TABLE alert_api DROP COLUMN IF EXISTS enabled;

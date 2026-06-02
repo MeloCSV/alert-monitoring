@@ -36,7 +36,6 @@ class AlertApiService(AlertApiServicePort):
             default_alerts.extend(defaults)
             adhoc_rules.extend(adhoc)
 
-        adhoc_rules = [r for r in adhoc_rules if r.enabled]
         self.default_alert_api_repository.upsert_batch(default_alerts)
         self.default_alert_api_repository.delete_where_not_in([d.raw_name for d in default_alerts])
         self.alert_api_repository.delete_all()
