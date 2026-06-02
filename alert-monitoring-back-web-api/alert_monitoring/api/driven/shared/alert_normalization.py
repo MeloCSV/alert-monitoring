@@ -7,10 +7,9 @@ ALL_ENVIRONMENTS: Tuple[str, ...] = ("dev", "itg", "pre", "pro")
 NAMESPACE_LABEL_KEYS: Tuple[str, ...] = ("namespace", "exported_namespace", "backend_target_name", "backend_name")
 JOB_LABEL_KEYS: Tuple[str, ...] = ("job_name", "deployment", "horizontalpodautoscaler")
 
-# Etiquetas cuyo valor se muestra como "chip" en las alertas Ad-hoc (jobs + namespaces alarmados).
-ADHOC_CHIP_LABEL_KEYS: Tuple[str, ...] = (
+# Etiquetas de job que se muestran como chip en alertas Ad-hoc cuando hay granularidad de job.
+ADHOC_JOB_CHIP_LABEL_KEYS: Tuple[str, ...] = (
     "job_name", "deployment", "horizontalpodautoscaler", "cronjob",
-    "namespace", "exported_namespace", "backend_target_name", "backend_name",
 )
 
 # Lookup de traducción: raw_name → (display_name, display_description).
@@ -239,18 +238,23 @@ def clean_label_value(value: str) -> str:
 
 
 def extract_adhoc_chips(expr: Optional[str]) -> List[str]:
-    """Extrae los jobs/namespaces alarmados (selectores ``=`` o ``=~``) de una condición Ad-hoc."""
+    """Extrae chips para alertas Ad-hoc.
+
+    Si hay selectores de job (job_name, deployment, etc.) se devuelven esos.
+    Si solo hay selectores de namespace (namespace entero incluido), se devuelve
+    lista vacía porque no hay granularidad adicional que mostrar.
+    """
     if not expr:
         return []
-    chips: List[str] = []
-    for key in ADHOC_CHIP_LABEL_KEYS:
+    job_chips: List[str] = []
+    for key in ADHOC_JOB_CHIP_LABEL_KEYS:
         regex = rf'{key}\s*=~?\s*"([^"]+)"'
         for match in re.findall(regex, expr):
             for raw in match.split("|"):
                 cleaned = clean_label_value(raw)
-                if cleaned and cleaned not in chips:
-                    chips.append(cleaned)
-    return chips
+                if cleaned and cleaned not in job_chips:
+                    job_chips.append(cleaned)
+    return job_chips
 
 
 def _split_top_level_alternatives(pattern: str) -> List[str]:
