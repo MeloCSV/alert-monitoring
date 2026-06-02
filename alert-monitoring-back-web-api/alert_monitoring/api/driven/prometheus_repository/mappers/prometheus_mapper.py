@@ -5,13 +5,17 @@ from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 from alert_monitoring.api.driven.shared.alert_normalization import (
     BOOL_CHANNEL_LABELS,
-    JOB_LABEL_KEYS,
-    NAMESPACE_LABEL_KEYS,
     display_canal,
     environments_or_all,
     extract_adhoc_chips,
-    extract_label_alternatives,
 )
+
+
+def is_default_rule(rule: PrometheusRule) -> bool:
+    return (
+        str(rule.labels.get("alertype", "")).lower() == "default"
+        and rule.group_name.lower().startswith("default")
+    )
 
 
 class PrometheusMapper:
@@ -20,10 +24,7 @@ class PrometheusMapper:
 
     def _map_rule(self, rule: PrometheusRule) -> Alert:
         labels = rule.labels
-        is_default = (
-            str(labels.get("alertype", "")).lower() == "default"
-            and rule.group_name.lower().startswith("default")
-        )
+        is_default = is_default_rule(rule)
         raw_name = rule.alert.split()[0] if rule.alert else rule.alert
         name = raw_name if is_default else rule.alert
         description = rule.annotations.get("message", "Sin descripción")
@@ -35,9 +36,6 @@ class PrometheusMapper:
             source_tool="Prometheus",
             severity=labels.get("severity", "unknown"),
             chips=extract_adhoc_chips(rule.expr) if not is_default else [],
-            excl_ns=extract_label_alternatives(rule.expr, NAMESPACE_LABEL_KEYS, exclude=True) if is_default else [],
-            incl_ns=extract_label_alternatives(rule.expr, NAMESPACE_LABEL_KEYS, exclude=False) if is_default else [],
-            excl_jobs=extract_label_alternatives(rule.expr, JOB_LABEL_KEYS, exclude=True) if is_default else [],
             environments=["pro"] if is_default else environments_or_all(self._infer_environments(rule)),
             microservice=self._infer_microservice(rule),
             solution=self._infer_solution(rule),

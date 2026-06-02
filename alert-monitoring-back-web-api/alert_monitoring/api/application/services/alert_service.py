@@ -22,7 +22,7 @@ from alert_monitoring.api.driven.elastic_repository.adapters.elastic_adapter imp
 from alert_monitoring.api.driven.elastic_repository.mappers.elastic_mapper import ElasticMapper
 from alert_monitoring.api.driven.kibana_repository.adapters.kibana_adapter import KibanaAdapter
 from alert_monitoring.api.driven.prometheus_repository.adapters.prometheus_adapter import PrometheusAdapter
-from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper
+from alert_monitoring.api.driven.prometheus_repository.mappers.prometheus_mapper import PrometheusMapper, is_default_rule
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 from alert_monitoring.api.domain.models.blackout import Blackout
@@ -80,26 +80,25 @@ class AlertService(AlertServicePort):
                 self.logger.warning(f"solution '{alert.solution}' not found in catalog")
         return alerts
 
-    def _upsert_default_alerts(self, default_rules: List[Alert]) -> None:
+    def _upsert_default_alerts(self, default_rules) -> None:
         if not default_rules:
             return
 
         exclusions = build_exclusion_updates(default_rules)
 
-        # First raw_description encountered per raw_name (annotation message from Prometheus)
         raw_descriptions: dict[str, str] = {}
         first_severity: dict[str, str] = {}
         first_channel: dict[str, str] = {}
-        for alert in default_rules:
-            raw_name = alert.prometheus_name
+        for rule in default_rules:
+            raw_name = rule.alert.split()[0] if rule.alert else None
             if not raw_name:
                 continue
-            if raw_name not in raw_descriptions and alert.description:
-                raw_descriptions[raw_name] = alert.description
-            if raw_name not in first_severity and alert.severity:
-                first_severity[raw_name] = alert.severity
-            if raw_name not in first_channel and alert.notification_channel:
-                first_channel[raw_name] = alert.notification_channel
+            if raw_name not in raw_descriptions:
+                raw_descriptions[raw_name] = rule.annotations.get("message", "")
+            if raw_name not in first_severity:
+                first_severity[raw_name] = rule.labels.get("severity", "")
+            if raw_name not in first_channel:
+                first_channel[raw_name] = self.prometheus_mapper._infer_channel(rule.labels) or ""
 
         upsert_list: List[DefaultAlert] = []
         for raw_name, (excl_ns, incl_ns, excl_jobs) in exclusions.items():
@@ -107,10 +106,10 @@ class AlertService(AlertServicePort):
             upsert_list.append(DefaultAlert(
                 raw_name=raw_name,
                 display_name=translation[0] if translation else raw_name,
-                raw_description=raw_descriptions.get(raw_name),
+                raw_description=raw_descriptions.get(raw_name) or None,
                 display_description=translation[1] if translation else None,
-                severity=first_severity.get(raw_name),
-                notification_channel=first_channel.get(raw_name),
+                severity=first_severity.get(raw_name) or None,
+                notification_channel=first_channel.get(raw_name) or None,
                 excluded_namespaces=excl_ns,
                 included_namespaces=incl_ns,
                 excluded_jobs=excl_jobs,
@@ -121,17 +120,15 @@ class AlertService(AlertServicePort):
     def sync_prometheus_alerts(self) -> int:
         self.logger.info('sync_prometheus_alerts')
         rules = self.prometheus_adapter.fetch_rules()
-        alerts = self.prometheus_mapper.to_domain(rules)
+        default_raw_rules = [r for r in rules if is_default_rule(r)]
+        adhoc_alerts = [a for a in self.prometheus_mapper.to_domain(rules) if a.alert_type != "Por Defecto"]
         catalog_lookup = self._build_catalog_lookup()
-        self._normalize_solutions(alerts, catalog_lookup)
-
-        default_rules = [a for a in alerts if a.alert_type == "Por Defecto"]
-        adhoc_alerts = [a for a in alerts if a.alert_type != "Por Defecto"]
+        self._normalize_solutions(adhoc_alerts, catalog_lookup)
 
         self.alert_repository.delete_by_source_tool("Prometheus")
         self.save_use_case.execute(adhoc_alerts)
-        self._upsert_default_alerts(default_rules)
-        return len(alerts)
+        self._upsert_default_alerts(default_raw_rules)
+        return len(rules)
 
     def sync_elastic_alerts(self) -> int:
         self.logger.info('sync_elastic_alerts')

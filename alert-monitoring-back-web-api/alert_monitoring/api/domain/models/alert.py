@@ -18,6 +18,3 @@ class Alert(BaseModel):
     cluster: Optional[str] = Field(None, description="Cluster K8S de origen (nombre del cluster)")
     prometheus_name: Optional[str] = Field(None, description="Nombre técnico original de Prometheus (solo alertas Por Defecto)")
     chips: List[str] = Field(default_factory=list, description="Jobs alarmados (solo Ad-hoc)")
-    excl_ns: List[str] = Field(default_factory=list, description="Namespaces excluidos (solo Por Defecto, uso interno del sync)")
-    incl_ns: List[str] = Field(default_factory=list, description="Namespaces re-incluidos (solo Por Defecto, uso interno del sync)")
-    excl_jobs: List[str] = Field(default_factory=list, description="Jobs excluidos (solo Por Defecto, uso interno del sync)")
