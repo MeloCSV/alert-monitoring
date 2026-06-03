@@ -15,3 +15,5 @@ class AlertApiDB(SQLModel, table=True):
     notification_channel: Optional[str] = None
     apis_alertadas: List[str] = Field(default=[], sa_column=Column(JSON))
     message: Optional[str] = None
+    application: Optional[str] = None
+    microservice: Optional[str] = None

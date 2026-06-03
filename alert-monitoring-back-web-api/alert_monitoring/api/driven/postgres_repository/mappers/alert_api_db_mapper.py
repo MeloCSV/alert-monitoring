@@ -14,6 +14,8 @@ class AlertApiDBMapper:
             notification_channel=rule.notification_channel,
             apis_alertadas=rule.apis_alertadas,
             message=rule.message,
+            application=rule.application,
+            microservice=rule.microservice,
         )
 
     def to_domain(self, rule_db: AlertApiDB) -> AlertApi:
@@ -24,6 +26,8 @@ class AlertApiDBMapper:
             notification_channel=rule_db.notification_channel,
             apis_alertadas=rule_db.apis_alertadas or [],
             message=rule_db.message,
+            application=rule_db.application,
+            microservice=rule_db.microservice,
         )
 
     def to_domain_list(self, rules_db: List[AlertApiDB]) -> List[AlertApi]:

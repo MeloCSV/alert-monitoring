@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from alert_monitoring.api.driven.kibana_repository.mappers.kibana_rule_mapper import KibanaRuleMapper
