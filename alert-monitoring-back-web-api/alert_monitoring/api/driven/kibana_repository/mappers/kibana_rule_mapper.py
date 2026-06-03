@@ -10,19 +10,47 @@ from alert_monitoring.api.driven.shared.alert_normalization import DEFAULT_ALERT
 
 logger = logging.getLogger(__name__)
 
-# Matches: [NOT] transactionElement.serviceName : value-or-group
+# API-monitoring KQL patterns
 _SERVICE_NAME_CLAUSE = re.compile(
     r"(?P<neg>\bNOT\s+)?transactionElement\.serviceName\s*:\s*(?P<val>\([^)]+\)|\"[^\"]+\"|[A-Za-z0-9_\-]+)",
     re.IGNORECASE,
 )
-# Matches: [NOT] api : value  (simple api field used in non-global rules)
 _API_CLAUSE = re.compile(
     r"(?P<neg>\bNOT\s+)?(?<!\w)api\s*:\s*(?P<val>\"[^\"]+\"|[A-Za-z0-9_\-]+)",
     re.IGNORECASE,
 )
 _QUOTED_VALUE = re.compile(r'"([A-Za-z0-9_\-]+)"')
 
-_INTERNAL_CONNECTORS = {".index", ".server-log"}
+# Log-based rules patterns
+_KQL_APPLICATION = re.compile(
+    r'(?<!\w)application\s*:\s*(?:"([^"]+)"|([A-Za-z0-9_.\-]+))',
+    re.IGNORECASE,
+)
+_KQL_NAMESPACE = re.compile(
+    r'k8s\.namespace\.name\s*:\s*(?:"([^"]+)"|([A-Za-z0-9_\-]+))',
+    re.IGNORECASE,
+)
+_KQL_DEPLOYMENT = re.compile(
+    r'k8s\.deployment\.name\s*:\s*(?:"([^"]+)"|([A-Za-z0-9_\-]+))',
+    re.IGNORECASE,
+)
+_INDEX_APP = re.compile(
+    r'logs[-_]otel[-_]([a-z][a-z0-9\-]+?)(?:[-_]gke[-_]|[-_]\*|[-_]pro|\*)',
+    re.IGNORECASE,
+)
+
+_INTERNAL_CONNECTORS = {".server-log"}
+
+# canal field in .index documents → display channel name
+_INDEX_CANAL_CHANNELS: Dict[str, str] = {
+    "alertmanager": "AlertManager",
+    "teams": "Microsoft Teams",
+    "msteams": "Microsoft Teams",
+    "omi": "ServiceNow",
+    "itom": "ServiceNow",
+    "jira": "Jira",
+    "mail": "Email",
+}
 
 _WEBHOOK_LABEL_CHANNELS: Dict[str, str] = {
     "msteams": "Microsoft Teams",
@@ -36,14 +64,18 @@ _CONNECTOR_DISPLAY: Dict[str, str] = {
     ".pagerduty": "PagerDuty",
 }
 
-# Lower value = higher priority (most restrictive)
+# Lower value = higher priority
 _CHANNEL_PRIORITY: Dict[str, int] = {
     "ServiceNow": 0,
-    "Microsoft Teams": 1,
-    "Slack": 2,
-    "Email": 3,
-    "PagerDuty": 4,
+    "AlertManager": 1,
+    "Microsoft Teams": 2,
+    "Jira": 3,
+    "Email": 4,
+    "Slack": 5,
+    "PagerDuty": 6,
 }
+
+_TEMPLATE_PREFIX = "{{"
 
 
 class KibanaRuleMapper:
@@ -98,7 +130,11 @@ class KibanaRuleMapper:
             notification_channel=self._infer_channel(actions),
             apis_alertadas=positive_apis,
             message=self._extract_message(actions),
+            application=self._extract_application(actions, params),
+            microservice=self._extract_microservice(params),
         )
+
+    # ── API extraction (existing logic) ─────────────────────────────────────
 
     def _extract_apis_split(self, params: dict) -> Tuple[List[str], List[str]]:
         """Returns (positive_apis, negated_apis) parsed from the KQL."""
@@ -137,6 +173,8 @@ class KibanaRuleMapper:
             return [clause.strip('"')]
         return [clause.strip()]
 
+    # ── Severity ─────────────────────────────────────────────────────────────
+
     def _infer_severity(self, actions: List[dict]) -> Optional[str]:
         for action in actions:
             params = action.get("params") or {}
@@ -152,14 +190,23 @@ class KibanaRuleMapper:
         return None
 
     def _severity_from_doc(self, doc: dict) -> Optional[str]:
-        for alert in doc.get("alerts") or []:
-            labels = alert.get("labels") or {}
-            sev = labels.get("severity")
-            if sev:
-                return str(sev).capitalize()
+        # alertManagerBody.labels.severity
+        sev = ((doc.get("alertManagerBody") or {}).get("labels") or {}).get("severity")
+        if sev:
+            return str(sev).capitalize()
+        # direct severity field
         sev = doc.get("severity")
         if sev:
             return str(sev).capitalize()
+        # level field
+        level = doc.get("level")
+        if level:
+            return str(level).capitalize()
+        # legacy: alerts array
+        for alert in doc.get("alerts") or []:
+            sev = (alert.get("labels") or {}).get("severity")
+            if sev:
+                return str(sev).capitalize()
         return None
 
     def _severity_from_body(self, body: str) -> Optional[str]:
@@ -168,6 +215,8 @@ class KibanaRuleMapper:
             return match.group(1).capitalize()
         return None
 
+    # ── Message ──────────────────────────────────────────────────────────────
+
     def _extract_message(self, actions: List[dict]) -> Optional[str]:
         for action in actions:
             params = action.get("params") or {}
@@ -175,15 +224,14 @@ class KibanaRuleMapper:
 
             if connector == ".index":
                 for doc in params.get("documents") or []:
-                    for alert in doc.get("alerts") or []:
-                        msg = (alert.get("annotations") or {}).get("message")
-                        if msg:
-                            return str(msg)
+                    msg = ((doc.get("alertManagerBody") or {}).get("annotations") or {}).get("message")
+                    if msg:
+                        return str(msg)
                     msg = doc.get("message")
                     if msg:
                         return str(msg)
 
-            if connector == ".webhook":
+            elif connector == ".webhook":
                 body = params.get("body")
                 if isinstance(body, str):
                     try:
@@ -197,11 +245,22 @@ class KibanaRuleMapper:
 
         return None
 
+    # ── Notification channel ─────────────────────────────────────────────────
+
     def _infer_channel(self, actions: List[dict]) -> Optional[str]:
         channels: List[str] = []
 
         for action in actions:
             connector = action.get("connector_type_id") or ""
+            params = action.get("params") or {}
+
+            if connector == ".index":
+                for doc in params.get("documents") or []:
+                    canal = str(doc.get("canal") or "").lower()
+                    display = _INDEX_CANAL_CHANNELS.get(canal)
+                    if display and display not in channels:
+                        channels.append(display)
+                continue
 
             if connector in _INTERNAL_CONNECTORS:
                 continue
@@ -233,10 +292,112 @@ class KibanaRuleMapper:
                 labels = parsed[0].get("labels") or {}
             elif isinstance(parsed, dict):
                 labels = parsed.get("labels") or {}
-
             for label_key, display_name in _WEBHOOK_LABEL_CHANNELS.items():
                 if str(labels.get(label_key, "")).lower() == "true":
                     return display_name
         except (json.JSONDecodeError, AttributeError, TypeError):
             pass
+        return None
+
+    # ── Application ──────────────────────────────────────────────────────────
+
+    def _extract_application(self, actions: List[dict], params: dict) -> Optional[str]:
+        # 1. alertManagerBody.labels.application (skip Mustache template values)
+        for action in actions:
+            if (action.get("connector_type_id") or "") != ".index":
+                continue
+            for doc in (action.get("params") or {}).get("documents") or []:
+                app = ((doc.get("alertManagerBody") or {}).get("labels") or {}).get("application")
+                if app and not str(app).startswith(_TEMPLATE_PREFIX):
+                    return str(app)
+
+        # 2. KQL application: field
+        kql = self._get_kql(params)
+        if kql:
+            m = _KQL_APPLICATION.search(kql)
+            if m:
+                return str(m.group(1) or m.group(2))
+
+        # 3. KQL k8s.namespace.name
+        if kql:
+            m = _KQL_NAMESPACE.search(kql)
+            if m:
+                return str(m.group(1) or m.group(2))
+
+        # 4. esQuery JSON must clause k8s.namespace.name
+        es_query_str = params.get("esQuery") or ""
+        if es_query_str:
+            try:
+                ns = self._find_must_value(
+                    json.loads(es_query_str).get("query") or {}, "k8s.namespace.name"
+                )
+                if ns:
+                    return ns
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # 5. Index pattern: logs-otel-{app}-*
+        return self._app_from_index(params)
+
+    def _extract_microservice(self, params: dict) -> Optional[str]:
+        # 1. KQL k8s.deployment.name (positive match, not preceded by NOT)
+        kql = self._get_kql(params)
+        if kql:
+            for m in _KQL_DEPLOYMENT.finditer(kql):
+                preceding = kql[max(0, m.start() - 10):m.start()]
+                if not re.search(r'\bNOT\b', preceding, re.IGNORECASE):
+                    return str(m.group(1) or m.group(2))
+
+        # 2. esQuery JSON must clause k8s.deployment.name
+        es_query_str = params.get("esQuery") or ""
+        if es_query_str:
+            try:
+                depl = self._find_must_value(
+                    json.loads(es_query_str).get("query") or {}, "k8s.deployment.name"
+                )
+                if depl:
+                    return depl
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        return None
+
+    def _get_kql(self, params: dict) -> str:
+        search_config = params.get("searchConfiguration") or {}
+        return (search_config.get("query") or {}).get("query") or ""
+
+    def _find_must_value(self, query: dict, field: str) -> Optional[str]:
+        """Find the positive value of a field in the must clause of a bool query."""
+        bool_q = query.get("bool") or {}
+        for clause in (bool_q.get("must") or []):
+            # term: {"field": {"value": "x"}} or {"field": "x"}
+            term = (clause.get("term") or {}).get(field)
+            if term is not None:
+                val = term.get("value") if isinstance(term, dict) else term
+                if val:
+                    return str(val)
+            # match / match_phrase: {"field": "x"} or {"field": {"query": "x"}}
+            for match_type in ("match", "match_phrase"):
+                match_val = (clause.get(match_type) or {}).get(field)
+                if match_val is not None:
+                    if isinstance(match_val, dict):
+                        val = match_val.get("query") or match_val.get("value")
+                    else:
+                        val = match_val
+                    if val:
+                        return str(val)
+        return None
+
+    def _app_from_index(self, params: dict) -> Optional[str]:
+        indices = params.get("index") or []
+        if isinstance(indices, str):
+            indices = [indices]
+        for idx in indices:
+            if isinstance(idx, dict):
+                idx_str = str(idx.get("title") or idx.get("name") or "")
+            else:
+                idx_str = str(idx)
+            m = _INDEX_APP.search(idx_str)
+            if m:
+                return m.group(1)
         return None

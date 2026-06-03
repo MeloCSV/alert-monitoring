@@ -10,3 +10,5 @@ class AlertApiResponse(BaseModel):
     notification_channel: Optional[str]
     apis_alertadas: List[str]
     message: Optional[str]
+    application: Optional[str]
+    microservice: Optional[str]
