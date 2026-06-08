@@ -44,7 +44,7 @@ CREATE TABLE catalog_apps (
     id        SERIAL          NOT NULL,
     object_id VARCHAR(50)     NOT NULL,
     name      VARCHAR(500)    NOT NULL,
-    csw_code  VARCHAR(100)    NULL,
+    csw_code  VARCHAR(100)    NOT NULL,
     CONSTRAINT catalog_apps_pkey PRIMARY KEY (id),
     CONSTRAINT catalog_apps_object_id_key UNIQUE (object_id)
 );
