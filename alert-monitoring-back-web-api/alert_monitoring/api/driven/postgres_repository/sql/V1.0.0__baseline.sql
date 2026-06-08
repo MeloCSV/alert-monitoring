@@ -30,15 +30,6 @@ CREATE TABLE default_alert_app (
     CONSTRAINT default_alert_app_raw_name_key UNIQUE (raw_name)
 );
 
-COMMENT ON TABLE default_alert_app IS 'Catálogo canónico de alertas por defecto. Una fila por tipo de alerta, independientemente de la nube o fichero Prometheus de origen. Se puebla y actualiza durante el sync de Prometheus.';
-COMMENT ON COLUMN default_alert_app.raw_name IS 'Nombre original de la alerta en Prometheus (e.g. Default_Service_Status_KO)';
-COMMENT ON COLUMN default_alert_app.display_name IS 'Nombre legible para la UI. Viene de DEFAULT_ALERT_DISPLAY si existe, si no usa raw_name';
-COMMENT ON COLUMN default_alert_app.raw_description IS 'Mensaje de anotación original del fichero Prometheus con placeholders de labels';
-COMMENT ON COLUMN default_alert_app.display_description IS 'Descripción traducida para la UI. Viene de DEFAULT_ALERT_DISPLAY si existe, si no es NULL';
-COMMENT ON COLUMN default_alert_app.excluded_namespaces IS 'Unión de todos los patrones namespace!~ de todas las reglas Prometheus para esta alerta';
-COMMENT ON COLUMN default_alert_app.included_namespaces IS 'Unión de todos los patrones namespace=~ de las reglas criticas (re-inclusiones)';
-COMMENT ON COLUMN default_alert_app.excluded_jobs IS 'Unión de todos los patrones job/deployment!~ de todas las reglas Prometheus para esta alerta';
-
 
 CREATE TABLE catalog_apps (
     id        SERIAL          NOT NULL,
