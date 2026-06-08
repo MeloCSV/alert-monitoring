@@ -121,6 +121,8 @@ class _DisplayItem:
 
 
 class _DisplayModel:
+    raw_name = None  # class-level attribute needed for model_cls.raw_name in filter()
+
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
