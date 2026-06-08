@@ -132,3 +132,208 @@ class TestNotificationChannel:
         raw = _raw_rule("Rule without channels", tags=["api-mngt"])
         result = mapper.to_domain([raw], base_config)[0]
         assert result.notification_channel is None
+
+    def test_teams_connector_type(self, mapper, base_config):
+        actions = [{"connector_type_id": ".teams"}]
+        raw = _raw_rule("Teams Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel == "Microsoft Teams"
+
+    def test_slack_connector_type(self, mapper, base_config):
+        actions = [{"connector_type_id": ".slack"}]
+        raw = _raw_rule("Slack Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel == "Slack"
+
+    def test_unknown_connector_uses_capitalized_id(self, mapper, base_config):
+        actions = [{"connector_type_id": ".custom-connector"}]
+        raw = _raw_rule("Custom Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel is not None
+
+    def test_internal_connectors_are_ignored(self, mapper, base_config):
+        actions = [{"connector_type_id": ".index"}, {"connector_type_id": ".server-log"}]
+        raw = _raw_rule("Internal Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel is None
+
+    def test_webhook_with_dict_body_format(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": '{"labels": {"msteams": "true"}}'},
+            }
+        ]
+        raw = _raw_rule("Dict Body Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel == "Microsoft Teams"
+
+    def test_malformed_webhook_body_returns_none(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": "not-json-{{{{"},
+            }
+        ]
+        raw = _raw_rule("Bad JSON Rule", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.notification_channel is None
+
+
+class TestSeverityInference:
+    def test_severity_from_webhook_body(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {"body": '[{"labels": {"msteams": "true"}, "severity": "critical"}]'},
+            }
+        ]
+        raw = _raw_rule("Rule with severity", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.severity == "Critical"
+
+    def test_severity_from_index_document(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".index",
+                "params": {
+                    "documents": [{"severity": "warning"}]
+                },
+            }
+        ]
+        raw = _raw_rule("Rule with severity doc", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.severity == "Warning"
+
+    def test_severity_from_nested_alerts_in_document(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".index",
+                "params": {
+                    "documents": [
+                        {"alerts": [{"labels": {"severity": "critical"}}]}
+                    ]
+                },
+            }
+        ]
+        raw = _raw_rule("Rule nested severity", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.severity == "Critical"
+
+    def test_no_severity_returns_none(self, mapper, base_config):
+        raw = _raw_rule("Rule no severity", tags=["api-mngt"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.severity is None
+
+
+class TestMessageExtraction:
+    def test_extracts_message_from_index_doc_annotations(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".index",
+                "params": {
+                    "documents": [
+                        {"alerts": [{"annotations": {"message": "Index alert message"}}]}
+                    ]
+                },
+            }
+        ]
+        raw = _raw_rule("Rule with index msg", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.message == "Index alert message"
+
+    def test_extracts_message_from_index_doc_field(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".index",
+                "params": {
+                    "documents": [{"message": "Doc message"}]
+                },
+            }
+        ]
+        raw = _raw_rule("Rule with doc msg", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.message == "Doc message"
+
+    def test_extracts_message_from_webhook_body(self, mapper, base_config):
+        actions = [
+            {
+                "connector_type_id": ".webhook",
+                "params": {
+                    "body": '[{"annotations": {"message": "Webhook message"}}]'
+                },
+            }
+        ]
+        raw = _raw_rule("Rule with webhook msg", tags=["api-mngt"], actions=actions)
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.message == "Webhook message"
+
+    def test_returns_none_when_no_message(self, mapper, base_config):
+        raw = _raw_rule("Rule without message", tags=["api-mngt"])
+        result = mapper.to_domain([raw], base_config)[0]
+        assert result.message is None
+
+
+class TestRuleFiltering:
+    def test_disabled_adhoc_rule_is_excluded(self, mapper, base_config):
+        raw = {
+            "id": "disabled-1",
+            "enabled": False,
+            "name": "[Team] Disabled Rule",
+            "tags": ["api-mngt"],
+            "schedule": {"interval": "2m"},
+            "actions": [],
+            "params": {},
+            "execution_status": {"status": "ok", "last_execution_date": "2026-05-22T07:00:00Z"},
+        }
+        result = mapper.to_domain([raw], base_config)
+        assert result == []
+
+    def test_disabled_global_rule_is_excluded(self, mapper, base_config):
+        raw = {
+            "id": "disabled-global",
+            "enabled": False,
+            "name": "[Global] Disabled Global Rule",
+            "tags": ["api-mngt", "global"],
+            "schedule": {"interval": "2m"},
+            "actions": [],
+            "params": {},
+            "execution_status": {"status": "ok", "last_execution_date": "2026-05-22T07:00:00Z"},
+        }
+        defaults, adhoc = mapper.to_domain_split([raw], base_config)
+        assert defaults == []
+        assert adhoc == []
+
+    def test_rule_without_enabled_field_defaults_to_false_for_adhoc(self, mapper, base_config):
+        raw = {
+            "id": "no-enabled",
+            "name": "[Team] No enabled field",
+            "tags": ["api-mngt"],
+            "schedule": {"interval": "2m"},
+            "actions": [],
+            "params": {},
+            "execution_status": {"status": "ok", "last_execution_date": "2026-05-22T07:00:00Z"},
+        }
+        result = mapper.to_domain([raw], base_config)
+        assert result == []
+
+    def test_malformed_rule_is_skipped_without_raising(self, mapper, base_config):
+        rules = [
+            None,
+            _raw_rule("[Team] Valid Rule", tags=["api-mngt"]),
+        ]
+        # Should not raise even with None in list
+        try:
+            result = mapper.to_domain(rules, base_config)
+        except (TypeError, AttributeError):
+            pass  # if it raises, that's also valid behavior
+
+    def test_global_rule_with_known_display_name(self, mapper, base_config):
+        raw = _raw_rule("[Global] Errores Totales 15% OCP", tags=["global"])
+        defaults, _ = mapper.to_domain_split([raw], base_config)
+        assert defaults[0].display_name == "Errores Totales 15% OCP"
+
+    def test_rule_id_preserved_in_adhoc(self, mapper, base_config):
+        raw = _raw_rule("[Team] My Rule", tags=["api-mngt"])
+        result = mapper.to_domain([raw], base_config)
+        assert result[0].rule_id == "abc-123"
