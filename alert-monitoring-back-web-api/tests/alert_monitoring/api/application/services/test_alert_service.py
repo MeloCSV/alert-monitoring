@@ -10,9 +10,12 @@ from alert_monitoring.api.application.ports.driven.default_alert_repository_port
 from alert_monitoring.api.application.ports.driven.default_alert_api_repository_port import DefaultAlertApiRepositoryPort
 from alert_monitoring.api.domain.models.alert import Alert
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
+from alert_monitoring.api.domain.models.api_solution_view import ApiSolutionView
 from alert_monitoring.api.domain.models.blackout import Blackout, BlackoutMatcher
+from alert_monitoring.api.domain.models.catalog_app import CatalogApp
 from alert_monitoring.api.domain.models.default_alert import DefaultAlert
 from alert_monitoring.api.domain.models.solution_view import SolutionView
+from alert_monitoring.api.driven.prometheus_repository.models.prometheus_model import PrometheusRule
 
 
 def _make_blackout(matchers: list[BlackoutMatcher]) -> Blackout:
@@ -193,3 +196,85 @@ class TestAlertServiceDelegatingMethods:
         result = service.get_active_blackouts()
 
         assert len(result) == 2
+
+    def test_get_api_solution_view_delegates_to_use_case(self, service, mocker):
+        expected = ApiSolutionView(app='my-app', default_alerts=[], adhoc_alerts=[], api_microservice_map={}, channels=[])
+        mocker.patch.object(service.get_api_solution_view_use_case, 'execute', return_value=expected)
+
+        result = service.get_api_solution_view('my-app')
+
+        assert result == expected
+        service.get_api_solution_view_use_case.execute.assert_called_once_with('my-app')
+
+    def test_invalid_regex_in_blackout_matcher_is_skipped(self, service):
+        invalid = Blackout(id='1', matchers=[
+            BlackoutMatcher(name='namespace', value='[invalid**', is_regex=True, is_equal=True)
+        ])
+        result = service._blackout_matches_solution(invalid, 'my-app')
+        assert result is False
+
+    def test_build_catalog_lookup_returns_lowercased_keys(self, service):
+        service.catalog_app_repository.get_all.return_value = [
+            CatalogApp(object_id='1', name='My-App'),
+            CatalogApp(object_id='2', name='Other-App'),
+        ]
+        result = service._build_catalog_lookup()
+        assert result['my-app'] == 'My-App'
+        assert result['other-app'] == 'Other-App'
+
+    def test_normalize_solutions_maps_to_canonical_name(self, service):
+        catalog = {'my-app': 'My-App'}
+        alert = _make_alert(solution='my-app')
+        service._normalize_solutions([alert], catalog)
+        assert alert.solution == 'My-App'
+
+    def test_normalize_solutions_warns_when_unknown(self, service):
+        catalog = {}
+        alert = _make_alert(solution='unknown-app')
+        service._normalize_solutions([alert], catalog)
+        service.logger.warning.assert_called_once()
+
+    def test_normalize_solutions_skips_alerts_without_solution(self, service):
+        catalog = {}
+        alert = _make_alert(solution=None)
+        service._normalize_solutions([alert], catalog)
+        service.logger.warning.assert_not_called()
+
+    def test_sync_prometheus_alerts_deletes_and_saves(self, service):
+        rules = [
+            PrometheusRule(alert='MyAlert', expr='', labels={'severity': 'warning'}, annotations={}, group_name='my-app.rules'),
+        ]
+        service.prometheus_adapter.fetch_rules.return_value = rules
+        service.catalog_app_repository.get_all.return_value = []
+        service.default_alert_repository.upsert_batch = MagicMock()
+
+        count = service.sync_prometheus_alerts()
+
+        assert count == 1
+        service.alert_repository.delete_by_source_tool.assert_called_once_with('Prometheus')
+
+    def test_sync_elastic_alerts_deletes_and_saves(self, service):
+        service.kibana_adapter.fetch_rules.return_value = []
+        service.elastic_adapter.parse_rules.return_value = []
+        service.elastic_mapper.to_domain.return_value = []
+        service.catalog_app_repository.get_all.return_value = []
+
+        count = service.sync_elastic_alerts()
+
+        assert count == 0
+        service.alert_repository.delete_by_source_tool.assert_called_once_with('Elastic')
+
+    def test_upsert_default_alerts_is_noop_for_empty_list(self, service):
+        service._upsert_default_alerts([])
+        service.default_alert_repository.upsert_batch.assert_not_called()
+
+    def test_upsert_default_alerts_calls_repository(self, service):
+        rule = PrometheusRule(
+            alert='Default_Status some label',
+            expr='namespace!~"excl-ns"',
+            labels={'severity': 'warning'},
+            annotations={'message': 'Service down'},
+            group_name='default.rules',
+        )
+        service._upsert_default_alerts([rule])
+        service.default_alert_repository.upsert_batch.assert_called_once()

@@ -3,7 +3,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from alert_monitoring.api.application.use_cases.get_solution_view_use_case import GetSolutionViewUseCase
+from alert_monitoring.api.application.use_cases.get_solution_view_use_case import (
+    GetSolutionViewUseCase,
+    _evaluate,
+    _regex_matches,
+    _is_prefix_of,
+    _literal_prefix,
+)
 from alert_monitoring.api.application.ports.driven.alert_repository_port import AlertRepositoryPort
 from alert_monitoring.api.application.ports.driven.default_alert_repository_port import DefaultAlertRepositoryPort
 from alert_monitoring.api.domain.models.alert import Alert
@@ -221,3 +227,32 @@ class TestGetSolutionViewUseCase:
         result = use_case.execute('my-app')
 
         assert result.default_alerts[0].description == 'Raw technical message'
+
+
+class TestGetSolutionViewEdgeCases:
+    """Tests covering edge cases in the pure helper functions."""
+
+    def test_excluded_jobs_causes_partial(self):
+        default = _make_default_alert(excluded_jobs=['my-app-worker'])
+        is_disabled, is_partial, chips = _evaluate(default, 'my-app', set())
+        assert is_partial is True
+        assert 'my-app-worker' in chips
+
+    def test_excluded_jobs_not_triggered_when_no_prefix_match(self):
+        default = _make_default_alert(excluded_jobs=['other-worker'])
+        is_disabled, is_partial, chips = _evaluate(default, 'my-app', set())
+        assert is_partial is False
+
+    def test_regex_matches_returns_false_for_invalid_regex(self):
+        assert _regex_matches('my-app', '[invalid**') is False
+
+    def test_is_prefix_of_returns_false_for_empty_target(self):
+        assert _is_prefix_of('', 'my-app-back') is False
+
+    def test_literal_prefix_handles_backslash_escape(self):
+        result = _literal_prefix('my\\-app-back')
+        assert result == 'my-app-back'
+
+    def test_literal_prefix_stops_at_regex_special_char(self):
+        result = _literal_prefix('my-app.*')
+        assert result == 'my-app'
