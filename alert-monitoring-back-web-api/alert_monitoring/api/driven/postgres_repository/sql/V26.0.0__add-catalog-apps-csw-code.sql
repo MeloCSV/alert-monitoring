@@ -1,0 +1,1 @@
+ALTER TABLE catalog_apps ADD COLUMN IF NOT EXISTS csw_code VARCHAR;

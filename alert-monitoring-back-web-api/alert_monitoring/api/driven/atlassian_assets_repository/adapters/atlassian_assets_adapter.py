@@ -4,6 +4,7 @@ from typing import List
 from alert_monitoring.api.domain.models.catalog_app import CatalogApp
 from alert_monitoring.api.driven.atlassian_assets_repository.clients.atlassian_assets_http_client import (
     AtlassianAssetsHttpClient,
+    ATTR_CSW_CODE,
     ATTR_PLATFORM,
 )
 from alert_monitoring.api.driven.atlassian_assets_repository.config.atlassian_assets_settings import load_atlassian_assets_config
@@ -37,9 +38,12 @@ class AtlassianAssetsAdapter:
                 logger.debug("Aplicación '%s' sin plataforma (legacy), ignorada.", name)
                 continue
 
+            csw_code = self.client.extract_attribute(attributes, ATTR_CSW_CODE)
+
             apps.append(CatalogApp(
                 object_id=str(object_id),
                 name=name,
+                csw_code=csw_code,
             ))
 
         return apps

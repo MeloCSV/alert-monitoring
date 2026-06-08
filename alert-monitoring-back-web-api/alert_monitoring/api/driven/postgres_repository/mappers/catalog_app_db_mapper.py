@@ -10,12 +10,14 @@ class CatalogAppDBMapper:
         return CatalogAppDB(
             object_id=app.object_id,
             name=app.name,
+            csw_code=app.csw_code,
         )
 
     def to_domain(self, app_db: CatalogAppDB) -> CatalogApp:
         return CatalogApp(
             object_id=app_db.object_id,
             name=app_db.name,
+            csw_code=app_db.csw_code,
         )
 
     def to_domain_list(self, apps_db: List[CatalogAppDB]) -> List[CatalogApp]:
