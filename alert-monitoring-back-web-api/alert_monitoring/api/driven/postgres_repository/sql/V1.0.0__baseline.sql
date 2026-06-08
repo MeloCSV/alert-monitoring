@@ -63,12 +63,6 @@ CREATE TABLE catalog_app_api (
 
 CREATE INDEX idx_catalog_app_api_app ON catalog_app_api (app);
 
-COMMENT ON TABLE catalog_app_api IS 'Correlación entre aplicaciones CNA y las APIs que producen sus microservicios.';
-COMMENT ON COLUMN catalog_app_api.app IS 'Nombre canónico de la aplicación (de catalog_apps)';
-COMMENT ON COLUMN catalog_app_api.microservice IS 'Nombre completo del microservicio/despliegue';
-COMMENT ON COLUMN catalog_app_api.apis IS 'Lista de APIs producidas por este microservicio';
-
-
 CREATE TABLE alert_api (
     id                   BIGSERIAL       NOT NULL,
     rule_id              VARCHAR(100)    NOT NULL,
@@ -80,10 +74,6 @@ CREATE TABLE alert_api (
     CONSTRAINT alert_api_pkey PRIMARY KEY (id),
     CONSTRAINT alert_api_rule_id_key UNIQUE (rule_id)
 );
-
-COMMENT ON TABLE alert_api IS 'Reglas de alerting de APIs extraídas de Kibana.';
-COMMENT ON COLUMN alert_api.rule_id IS 'ID original de la regla en Kibana';
-COMMENT ON COLUMN alert_api.apis_alertadas IS 'Lista de APIs detectadas en el KQL de la regla';
 
 
 CREATE TABLE default_alert_api (
@@ -98,8 +88,3 @@ CREATE TABLE default_alert_api (
     CONSTRAINT default_alert_api_pkey PRIMARY KEY (id),
     CONSTRAINT default_alert_api_raw_name_key UNIQUE (raw_name)
 );
-
-COMMENT ON TABLE default_alert_api IS 'Catálogo canónico de alertas por defecto para APIs. Una fila por tipo de alerta.';
-COMMENT ON COLUMN default_alert_api.raw_name IS 'Nombre técnico original de la alerta en Kibana';
-COMMENT ON COLUMN default_alert_api.display_name IS 'Nombre legible para la UI';
-COMMENT ON COLUMN default_alert_api.excluded_apis IS 'APIs excluidas del alertado por defecto';
