@@ -123,7 +123,7 @@ class TestAlertControllerAdapter:
         response = self.client.get('/alerts?name=my-alert&severity=critical&solution=my-app')
 
         assert response.status_code == 200
-        call_args = mock_get.call_args[0][1]  # first positional arg after self is AlertFilter
+        call_args = mock_get.call_args[0][0]  # first positional arg after self is AlertFilter
         assert call_args.name == 'my-alert'
         assert call_args.severity == 'critical'
         assert call_args.solution == 'my-app'
