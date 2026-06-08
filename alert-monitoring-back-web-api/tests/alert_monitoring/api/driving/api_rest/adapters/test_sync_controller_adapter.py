@@ -94,6 +94,24 @@ class TestSyncGlobalControllerAdapter:
         assert 'catalog' in data
         assert 'error' in data['catalog']
 
+    @patch.object(CatalogAppApiService, CatalogAppApiService.sync_catalog_app_api.__name__)
+    @patch.object(CatalogService, CatalogService.sync_catalog.__name__)
+    def test_sync_global_returns_500_when_catalog_api_fails(self, mock_catalog, mock_catalog_api):
+        """
+        Given catalog succeeds but catalog_api service fails
+        When POST /sync/global
+        Then should return 500 and abort before running parallel syncs
+        """
+        mock_catalog.return_value = 10
+        mock_catalog_api.side_effect = RuntimeError("Catalog API connection error")
+
+        response = self.client.post('/sync/global')
+
+        assert response.status_code == 500
+        data = response.json()
+        assert 'catalog_api' in data
+        assert 'error' in data['catalog_api']
+
     @patch.object(AlertApiService, AlertApiService.sync_alert_apis.__name__)
     @patch.object(AlertService, AlertService.sync_elastic_alerts.__name__)
     @patch.object(AlertService, AlertService.sync_prometheus_alerts.__name__)
