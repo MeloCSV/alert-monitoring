@@ -35,12 +35,12 @@ class TestNameCleaning:
     def test_global_prefix_is_stripped_from_name(self, mapper, base_config):
         raw = _raw_rule("[Global] Errores Totales 15% OCP", tags=["global"])
         defaults, _ = mapper.to_domain_split([raw], base_config)
-        assert defaults[0].name == "Errores Totales 15% OCP"
+        assert defaults[0].raw_name == "Errores Totales 15% OCP"
 
     def test_global_prefix_stripped_case_insensitive(self, mapper, base_config):
         raw = _raw_rule("[global] Some Rule", tags=["global"])
         defaults, _ = mapper.to_domain_split([raw], base_config)
-        assert defaults[0].name == "Some Rule"
+        assert defaults[0].raw_name == "Some Rule"
 
     def test_non_global_prefix_is_preserved(self, mapper, base_config):
         raw = _raw_rule("[Absence] Errores 500", tags=["api-mngt"])
@@ -67,7 +67,8 @@ class TestExtractApis:
         )
         raw = _raw_rule("[Global] Errores 500 por API y método", tags=["api-mngt", "global"], kql=kql)
         defaults, _ = mapper.to_domain_split([raw], base_config)
-        assert defaults[0].apis_alertadas == []
+        # Global rules store negated APIs in excluded_apis, not as positive targets
+        assert sorted(defaults[0].excluded_apis) == ['absence', 'payroll', 'suppliers']
 
     def test_excludes_negated_apis_from_positive_matches(self, mapper, base_config):
         kql = (
@@ -95,7 +96,8 @@ class TestExtractApis:
             "execution_status": {"status": "ok", "last_execution_date": "2026-05-22T07:00:00Z"},
         }
         defaults, _ = mapper.to_domain_split([raw], base_config)
-        assert defaults[0].apis_alertadas == []
+        # ES|QL rules have no KQL, so no APIs can be extracted
+        assert defaults[0].excluded_apis == []
 
 
 class TestNotificationChannel:
