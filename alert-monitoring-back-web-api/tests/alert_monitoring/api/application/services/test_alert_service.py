@@ -253,10 +253,10 @@ class TestAlertServiceDelegatingMethods:
         assert count == 1
         service.alert_repository.delete_by_source_tool.assert_called_once_with('Prometheus')
 
-    def test_sync_elastic_alerts_deletes_and_saves(self, service):
+    def test_sync_elastic_alerts_deletes_and_saves(self, service, mocker):
         service.kibana_adapter.fetch_rules.return_value = []
         service.elastic_adapter.parse_rules.return_value = []
-        service.elastic_mapper.to_domain.return_value = []
+        mocker.patch.object(service.elastic_mapper, 'to_domain', return_value=[])
         service.catalog_app_repository.get_all.return_value = []
 
         count = service.sync_elastic_alerts()

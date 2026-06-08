@@ -13,7 +13,7 @@ def _raw_silence(id='s1', state='active', matchers=None, starts_at=None, ends_at
     return {
         'id': id,
         'status': {'state': state},
-        'matchers': matchers or [{'name': 'namespace', 'value': 'my-app', 'isRegex': False, 'isEqual': True}],
+        'matchers': matchers if matchers is not None else [{'name': 'namespace', 'value': 'my-app', 'isRegex': False, 'isEqual': True}],
         'startsAt': starts_at or '2025-01-01T00:00:00Z',
         'endsAt': ends_at or '2025-12-31T23:59:59Z',
         'createdBy': 'admin',
