@@ -1,1 +1,0 @@
-ALTER TABLE alerts ADD COLUMN IF NOT EXISTS prometheus_name VARCHAR(500);
