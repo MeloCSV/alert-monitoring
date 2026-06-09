@@ -33,6 +33,7 @@ class CatalogAppRepositoryAdapter(CatalogAppRepositoryPort):
     def _apply(row: CatalogAppDB, app: CatalogApp) -> None:
         row.object_id = app.object_id
         row.name = app.name
+        row.csw_code = app.csw_code
 
     def get_all(self, name: Optional[str] = None) -> List[CatalogApp]:
         self.logger.info(f"Consultando catálogo name={name}")
