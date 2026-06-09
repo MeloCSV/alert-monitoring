@@ -3,6 +3,10 @@ version: '3.7'
 networks:
   local:
     name: my-web-network
+  metrics:
+    driver: bridge
+  traces:
+    driver: bridge
 
 services:
   db_postgres_alert_monitoring:
@@ -34,7 +38,47 @@ services:
     networks:
       - local
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    hostname: prometheus
+    user: ":"
+    container_name: prometheus
+    networks:
+      - metrics
+    command: --config.file=/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/prometheus.yml
+      - prometheus_data:/prometheus
+
+  opentelemetry:
+    image: otel/opentelemetry-collector-contrib:0.132.1
+    hostname: opentelemetry
+    container_name: opentelemetry
+    command: --config=/collector-config.yml
+    ports:
+      - "7979:7979"
+      - "55680:55680"
+      - "55681:55681"
+    volumes:
+      - ./collector-config.yml:/collector-config.yml
+    networks:
+      - metrics
+      - traces
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.72.0
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "16686:16686"
+    networks:
+      - traces
+
 volumes:
   postgresql:
   postgres11-data:
+    driver: local
+  prometheus_data:
     driver: local
