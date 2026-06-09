@@ -29,6 +29,7 @@ pytest-xdist = "~3.6"
 pytest-faker = "~2.0"
 pytest-freezer = "~0.4"
 pyfakefs = "~5.7"
+testcontainers = {version = "~4.9", extras = ["postgres"]}
 
 [[tool.poetry.source]]
 name = "virtual-poetry"
@@ -36,7 +37,8 @@ url = "https://artifactory.gcp.mercadona.com/artifactory/api/pypi/virtual-poetry
 priority = "supplemental"
 
 [tool.poe.tasks]
-tests_ci = "pytest -ra -q --cov-report=term-missing --cov-report xml:coverage.xml --cov-fail-under=80 --cov=alert_monitoring --junitxml=result.xml -v -s -n 2 --dist loadscope"
+tests_ci = "pytest -ra -q --cov-report=term-missing --cov-report xml:coverage.xml --cov-fail-under=80 --cov=alert_monitoring --junitxml=result.xml -v -s -n 2 --dist loadscope -m 'not integration'"
+tests_integration = "pytest tests/integration -v -s -m integration"
 
 [tool.pytest.ini_options]
 pythonpath = "."
@@ -44,6 +46,9 @@ asyncio_default_fixture_loop_scope = "function"
 env = [
     "ENVIRONMENT=local",
     "FWK_PATH=alert_monitoring/api",
+]
+markers = [
+    "integration: tests de integración con base de datos real (requieren Docker)",
 ]
 
 
