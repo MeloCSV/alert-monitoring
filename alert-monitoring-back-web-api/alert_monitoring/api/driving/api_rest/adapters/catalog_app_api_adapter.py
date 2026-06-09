@@ -1,7 +1,8 @@
 from logging import Logger
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import Depends, Query, status
+from fwkpy_lib_fastapi.public.observability import TracingRouter
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
@@ -11,7 +12,7 @@ from alert_monitoring.api.application.ports.driving.catalog_app_api_service_port
 from alert_monitoring.api.driving.api_rest.models.catalog_app_api_response import CatalogAppApiResponse
 from alert_monitoring.api.driving.api_rest.responses import ok_list
 
-router = APIRouter()
+router = TracingRouter()
 
 _ERROR_500 = {500: {'model': str}}
 

@@ -4,7 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, Future
 from logging import Logger
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends
+from fastapi import Depends
+from fwkpy_lib_fastapi.public.observability import TracingRouter
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
@@ -17,7 +18,7 @@ from alert_monitoring.api.application.ports.driving.catalog_service_port import 
 from alert_monitoring.api.application.ports.driving.alert_api_service_port import AlertApiServicePort
 
 
-router = APIRouter()
+router = TracingRouter()
 
 _ERROR_500 = {500: {'model': str}}
 

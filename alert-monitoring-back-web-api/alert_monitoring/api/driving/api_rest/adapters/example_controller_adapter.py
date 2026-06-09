@@ -1,7 +1,8 @@
 from typing import Union, List
 from logging import Logger
 
-from fastapi import APIRouter, Depends, status
+from fastapi import Depends, status
+from fwkpy_lib_fastapi.public.observability import TracingRouter
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import Response, JSONResponse
 
@@ -18,7 +19,7 @@ from alert_monitoring.api.application.ports.driving.use_case_service_port import
 from alert_monitoring.api.domain.models.example import Example
 
 
-router = APIRouter()
+router = TracingRouter()
 
 
 @router.get('/examples', tags=['examples'], response_model=List[ExampleResponse],

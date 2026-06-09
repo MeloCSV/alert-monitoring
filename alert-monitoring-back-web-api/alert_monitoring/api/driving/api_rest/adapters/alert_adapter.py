@@ -1,7 +1,8 @@
 from typing import List, Optional
 from logging import Logger
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import Depends, Query, status
+from fwkpy_lib_fastapi.public.observability import TracingRouter
 from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
@@ -19,7 +20,7 @@ from alert_monitoring.api.application.ports.driving.alert_service_port import Al
 from alert_monitoring.api.domain.models.alert_filter import AlertFilter
 
 
-router = APIRouter()
+router = TracingRouter()
 
 
 _ERROR_500 = {500: {'model': str}}
