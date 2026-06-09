@@ -37,7 +37,7 @@ url = "https://artifactory.gcp.mercadona.com/artifactory/api/pypi/virtual-poetry
 priority = "supplemental"
 
 [tool.poe.tasks]
-tests_ci = "pytest -ra -q --cov-report=term-missing --cov-report xml:coverage.xml --cov-fail-under=80 --cov=alert_monitoring --junitxml=result.xml -v -s -n 2 --dist loadscope -m 'not integration'"
+tests_ci = "pytest -ra -q --cov-report=term-missing --cov-report xml:coverage.xml --cov-fail-under=80 --cov=alert_monitoring --junitxml=result.xml -v -s -n auto -m 'not integration'"
 tests_integration = "pytest tests/integration -v -s -m integration"
 
 [tool.pytest.ini_options]
