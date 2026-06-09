@@ -1,0 +1,38 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:55680
+      http:
+        endpoint: 0.0.0.0:55681
+        cors:
+          allowed_origins:
+            - http://*
+            - https://*
+          allowed_headers:
+            - "*"
+          max_age: 7200
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+  prometheus:
+    endpoint: 0.0.0.0:7979
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      exporters: [debug, prometheus]
+      processors: [batch]
+    traces:
+      receivers: [otlp]
+      exporters: [debug, otlp]
+      processors: [batch]
