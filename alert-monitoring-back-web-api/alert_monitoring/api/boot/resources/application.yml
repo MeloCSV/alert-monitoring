@@ -60,8 +60,17 @@ fwkpyt:
     title: "Microservice - alert-monitoring-back-web-api"
     version: "0.0.1"
     description: "Backend microservice for alert-monitoring-back-web-api module, built with FastAPI."
+    lifespan: alert_monitoring.api.boot.lifespans.lifespan.AlertMonitoringLifespan
+    middlewares:
+      - path: fastapi.middleware.cors.CORSMiddleware
+        config:
+          allow_origins:
+            - "http://localhost:4200"
+            - "http://127.0.0.1:4200"
+          allow_methods: ["*"]
+          allow_headers: ["*"]
     security:
       excluded_paths:
         - /docs
         - /openapi.json
-  
+
