@@ -1,4 +1,5 @@
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, Future
 from logging import Logger
 from typing import Any, Dict
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from fwkpy_lib_core.common.injector import Injector
 from fwkpy_lib_utils.common.observability.logger.logger_setup import LoggerSetup
+from fwkpy_lib_database.synchronous.datasource import set_db_session_context, clean_session_context
 
 from alert_monitoring.api.application.ports.driving.alert_service_port import AlertServicePort
 from alert_monitoring.api.application.ports.driving.catalog_app_api_service_port import CatalogAppApiServicePort
@@ -25,6 +27,14 @@ def _run(fn) -> Dict[str, Any]:
         return {"synced": fn()}
     except Exception as e:
         return {"error": str(e)}
+
+
+def _run_isolated(fn) -> Dict[str, Any]:
+    token = set_db_session_context(session_id=str(uuid.uuid4()))
+    try:
+        return _run(fn)
+    finally:
+        clean_session_context(token=token)
 
 
 @router.post('/sync/global', tags=['sync'], status_code=200, responses=_ERROR_500)
@@ -55,9 +65,9 @@ def sync_global(
 
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures: Dict[str, Future] = {
-            "alerts_prometheus": executor.submit(_run, alert_service.sync_prometheus_alerts),
-            "alerts_elastic": executor.submit(_run, alert_service.sync_elastic_alerts),
-            "alert_api": executor.submit(_run, alert_api_service.sync_alert_apis),
+            "alerts_prometheus": executor.submit(_run_isolated, alert_service.sync_prometheus_alerts),
+            "alerts_elastic": executor.submit(_run_isolated, alert_service.sync_elastic_alerts),
+            "alert_api": executor.submit(_run_isolated, alert_api_service.sync_alert_apis),
         }
     results.update({name: future.result() for name, future in futures.items()})
 
