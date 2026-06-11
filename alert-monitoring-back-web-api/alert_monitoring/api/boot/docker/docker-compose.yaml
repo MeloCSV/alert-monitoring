@@ -25,12 +25,12 @@ services:
 
   flyway:
     image: flyway/flyway:9
-    command: >
-      -url=jdbc:postgresql://db_postgres_alert_monitoring:5432/alert_monitoring
-      -user=sa
-      -password=root
-      -connectRetries=10
-      migrate
+    command:
+      - -url=jdbc:postgresql://db_postgres_alert_monitoring:5432/alert_monitoring
+      - -user=sa
+      - -password=root
+      - -connectRetries=10
+      - migrate
     volumes:
       - ../../driven/postgres_repository/sql:/flyway/sql
     depends_on:
