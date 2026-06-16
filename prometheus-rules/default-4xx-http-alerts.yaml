@@ -1,0 +1,75 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: default-4xx-http-alerts
+  labels:
+    alertype: default
+spec:
+  groups:
+    - name: default.rules
+      rules:
+        - alert: Default_High_4xx_Http_Requests_Principal
+          annotations:
+            message: "El numero de peticiones 4xx en el loadbalancer interno llamando a {{ $labels.backend_target_name }} del entorno de pro ha superado el 5%"
+          expr: >-
+            label_replace(
+              sum(increase(stackdriver_internal_http_lb_rule_loadbalancing_googleapis_com_https_internal_request_count{
+                response_code=~"4.*",
+                backend_scope!="NO_BACKEND_SELECTED",
+                backend_target_name!~".*serve404.*|.*serve500.*|.*launchdarkly.*|.*dataquality.*|.*activo2.*|.*api-mngt.*|.*cloudbees.*|.*ccp.*|.*demo.*|.*doc-fwk.*|.*external-secrets.*|.*forms.*|.*gesdinero.*|.*gsecret.*|.*idtrab.*|.*jira-proxy.*|.*kube-.*|.*kubecost.*|.*monitoring.*|.*mot-lpc.*|.*opentelemetry.*|.*pause-pods.*|.*popeye.*|.*privoxy.*|.*prometheus.*|.*prubatch.*|.*rbotesencar.*|.*sqlproxy.*|.*synchronizer.*|.*tech.*|.*tornillo.*|.*velero.*|.*webinar.*|.*elastic.*|.*grafana.*|.*fet.*|.*elabel.*|.*fwk-front-angular.*|.*portor-back-web-bbf.*|.*portor-back-web-detail.*|.*portor-back-web-map.*|.*dlm.*|.*gefidocom.*|.*product.*|.*jefenam.*|.*hrcommon.*|.*cmfcve.*|.*cetp.*|.*architecture.*|.*fwkupdater.*|.*fwk-(front|back).*|.*rabbitmq.*|.*suman.*|.*mgacentral.*|.*organigrama.*|.*labmng.*|.*procesospi.*|.*captardoc.*|.*qrproduct.*|.*grupa.*|.*atenea.*",
+                url_map_name=~".*gateway-(intranet|gestion).*",
+                project_id="mdona-cloud-pro-common"
+              }[5m])
+            ) by (backend_target_name, job)
+            /
+            sum(increase(stackdriver_internal_http_lb_rule_loadbalancing_googleapis_com_https_internal_request_count{
+                url_map_name=~".*gateway-(intranet|gestion).*",
+                backend_scope!="NO_BACKEND_SELECTED",
+                backend_target_name!~".*serve404.*|.*serve500.*|.*launchdarkly.*|.*dataquality.*|.*activo2.*|.*api-mngt.*|.*cloudbees.*|.*ccp.*|.*demo.*|.*doc-fwk.*|.*external-secrets.*|.*forms.*|.*gesdinero.*|.*gsecret.*|.*idtrab.*|.*jira-proxy.*|.*kube-.*|.*kubecost.*|.*monitoring.*|.*mot-lpc.*|.*opentelemetry.*|.*pause-pods.*|.*popeye.*|.*privoxy.*|.*prometheus.*|.*prubatch.*|.*rbotesencar.*|.*sqlproxy.*|.*synchronizer.*|.*tech.*|.*tornillo.*|.*velero.*|.*webinar.*|.*elastic.*|.*grafana.*|.*fet.*|.*elabel.*|.*fwk-front-angular.*|.*portor-back-web-bbf.*|.*portor-back-web-detail.*|.*portor-back-web-map.*|.*dlm.*|.*gefidocom.*|.*product.*|.*jefenam.*|.*hrcommon.*|.*cmfcve.*|.*cetp.*|.*architecture.*|.*fwkupdater.*|.*fwk-(front|back).*|.*rabbitmq.*|.*suman.*|.*mgacentral.*|.*organigrama.*|.*labmng.*|.*procesospi.*|.*captardoc.*|.*qrproduct.*|.*grupa.*|.*atenea.*",
+                project_id="mdona-cloud-pro-common"
+            }[5m])
+            ) by (backend_target_name, job),
+              "application", "$3", "backend_target_name", "^([^-]+)-([^-]+)-([^-]+)-.*$"
+            ) * 100 > 5
+          for: 15m
+          labels:
+            severity: principal
+            canal: omi
+            environment: pro
+            namespace: '{{ $labels.backend_target_name }}'
+            alertype: default
+            type: MANUAL
+            omi: "true"
+
+        - alert: Default_High_4xx_Http_Requests_Critical
+          annotations:
+            message: "El numero de peticiones 4xx en el loadbalancer interno llamando a {{ $labels.backend_target_name }} del entorno de pro ha superado el 10%"
+          expr: >-
+            label_replace(
+              sum(increase(stackdriver_internal_http_lb_rule_loadbalancing_googleapis_com_https_internal_request_count{
+                response_code=~"4.*",
+                backend_scope!="NO_BACKEND_SELECTED",
+                backend_target_name!~".*serve404.*|.*serve500.*|.*launchdarkly.*|.*dataquality.*|.*activo2.*|.*api-mngt.*|.*cloudbees.*|.*ccp.*|.*demo.*|.*doc-fwk.*|.*external-secrets.*|.*forms.*|.*gesdinero.*|.*gsecret.*|.*idtrab.*|.*jira-proxy.*|.*kube-.*|.*kubecost.*|.*monitoring.*|.*mot-lpc.*|.*opentelemetry.*|.*pause-pods.*|.*popeye.*|.*privoxy.*|.*prometheus.*|.*prubatch.*|.*rbotesencar.*|.*sqlproxy.*|.*synchronizer.*|.*tech.*|.*tornillo.*|.*velero.*|.*webinar.*|.*elastic.*|.*grafana.*|.*fet.*|.*elabel.*|.*fwk-front-angular.*|.*portor-back-web-bbf.*|.*portor-back-web-detail.*|.*portor-back-web-map.*|.*dlm.*|.*gefidocom.*|.*product.*|.*jefenam.*|.*hrcommon.*|.*cmfcve.*|.*cetp.*|.*architecture.*|.*fwkupdater.*|.*fwk-(front|back).*|.*rabbitmq.*|.*suman.*|.*mgacentral.*|.*organigrama.*|.*labmng.*|.*procesospi.*|.*captardoc.*|.*qrproduct.*|.*grupa.*|.*atenea.*",
+                url_map_name=~".*gateway-(intranet|gestion).*",
+                project_id="mdona-cloud-pro-common"
+              }[5m])
+            ) by (backend_target_name, job)
+            /
+            sum(increase(stackdriver_internal_http_lb_rule_loadbalancing_googleapis_com_https_internal_request_count{
+                url_map_name=~".*gateway-(intranet|gestion).*",
+                backend_scope!="NO_BACKEND_SELECTED",
+                backend_target_name!~".*serve404.*|.*serve500.*|.*launchdarkly.*|.*dataquality.*|.*activo2.*|.*api-mngt.*|.*cloudbees.*|.*ccp.*|.*demo.*|.*doc-fwk.*|.*external-secrets.*|.*forms.*|.*gesdinero.*|.*gsecret.*|.*idtrab.*|.*jira-proxy.*|.*kube-.*|.*kubecost.*|.*monitoring.*|.*mot-lpc.*|.*opentelemetry.*|.*pause-pods.*|.*popeye.*|.*privoxy.*|.*prometheus.*|.*prubatch.*|.*rbotesencar.*|.*sqlproxy.*|.*synchronizer.*|.*tech.*|.*tornillo.*|.*velero.*|.*webinar.*|.*elastic.*|.*grafana.*|.*fet.*|.*elabel.*|.*fwk-front-angular.*|.*portor-back-web-bbf.*|.*portor-back-web-detail.*|.*portor-back-web-map.*|.*dlm.*|.*gefidocom.*|.*product.*|.*jefenam.*|.*hrcommon.*|.*cmfcve.*|.*cetp.*|.*architecture.*|.*fwkupdater.*|.*fwk-(front|back).*|.*rabbitmq.*|.*suman.*|.*mgacentral.*|.*organigrama.*|.*labmng.*|.*procesospi.*|.*captardoc.*|.*qrproduct.*|.*grupa.*|.*atenea.*",
+                project_id="mdona-cloud-pro-common"
+            }[5m])
+            ) by (backend_target_name, job),
+              "application", "$3", "backend_target_name", "^([^-]+)-([^-]+)-([^-]+)-.*$"
+            ) * 100 > 10
+          for: 10m
+          labels:
+            severity: critical
+            canal: omi
+            environment: pro
+            namespace: '{{ $labels.backend_target_name }}'
+            alertype: default
+            type: MANUAL
+            omi: "true"
