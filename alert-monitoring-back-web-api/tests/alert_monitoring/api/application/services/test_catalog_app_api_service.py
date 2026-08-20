@@ -106,6 +106,34 @@ class TestCatalogAppApiServiceResolveApp:
         assert result == "My-App"
 
 
+class TestCatalogAppApiServiceSync:
+
+    def test_syncs_entries_and_replaces_all_in_repository(self, service):
+        service.file_adapter.fetch_entries.return_value = [
+            {"child": "my-back", "parent": "api-a"},
+        ]
+        service.catalog_app_repository.get_all.return_value = [
+            CatalogApp(object_id='1', name='my')
+        ]
+
+        result = service.sync_catalog_app_api()
+
+        assert result == 1
+        service.repository.replace_all.assert_called_once()
+        replaced_items = service.repository.replace_all.call_args.args[0]
+        assert len(replaced_items) == 1
+        assert replaced_items[0].microservice == "my-back"
+
+    def test_syncs_zero_entries_when_none_match_the_catalog(self, service):
+        service.file_adapter.fetch_entries.return_value = []
+        service.catalog_app_repository.get_all.return_value = []
+
+        result = service.sync_catalog_app_api()
+
+        assert result == 0
+        service.repository.replace_all.assert_called_once_with([])
+
+
 class TestCatalogAppApiServiceGetAll:
 
     def test_get_all_delegates_to_repository(self, service):
