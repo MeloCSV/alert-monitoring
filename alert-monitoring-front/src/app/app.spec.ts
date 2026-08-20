@@ -23,4 +23,13 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.tab')?.textContent).toContain('Alarmado de aplicaciones');
   });
+
+  it('should switch the active tab on select', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    app.select('kibana-rules');
+
+    expect(app.activeTab).toBe('kibana-rules');
+  });
 });

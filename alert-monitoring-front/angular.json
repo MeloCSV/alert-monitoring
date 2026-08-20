@@ -78,7 +78,8 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "runner": "vitest",
-            "buildTarget": "::development"
+            "buildTarget": "::development",
+            "codeCoverageReporters": ["text", "html", "json-summary"]
           }
         }
       }
