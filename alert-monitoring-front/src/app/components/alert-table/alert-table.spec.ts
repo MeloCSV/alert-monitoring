@@ -75,6 +75,7 @@ describe('AlertTableComponent', () => {
 
     fixture = TestBed.createComponent(AlertTableComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
@@ -96,6 +97,7 @@ describe('AlertTableComponent', () => {
 
     fixture = TestBed.createComponent(AlertTableComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(component.error).toBe(true);

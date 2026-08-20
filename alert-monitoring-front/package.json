@@ -11,23 +11,23 @@
   "private": true,
   "packageManager": "npm@10.8.3",
   "dependencies": {
-    "@angular/common": "^19.0.0",
-    "@angular/compiler": "^19.0.0",
-    "@angular/core": "^19.0.0",
-    "@angular/forms": "^19.0.0",
-    "@angular/platform-browser": "^19.0.0",
+    "@angular/common": "^20.3.29",
+    "@angular/compiler": "^20.3.29",
+    "@angular/core": "^20.3.29",
+    "@angular/forms": "^20.3.29",
+    "@angular/platform-browser": "^20.3.29",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "^1.22.5",
-    "@angular/build": "^19.2.27",
-    "@angular/cli": "^19.0.0",
-    "@angular/compiler-cli": "^19.0.0",
+    "@angular/build": "^20.3.34",
+    "@angular/cli": "^20.3.34",
+    "@angular/compiler-cli": "^20.3.29",
+    "@vitest/coverage-v8": "^3.2.7",
     "jsdom": "27.0.0",
     "prettier": "^3.8.1",
-    "typescript": "~5.6.0",
-    "vitest": "^2.0.0"
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
   }
 }

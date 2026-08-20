@@ -16,11 +16,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render alertas heading', async () => {
+  it('should render the alerts tab', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Alertas');
+    expect(compiled.querySelector('.tab')?.textContent).toContain('Alarmado de aplicaciones');
   });
 });
